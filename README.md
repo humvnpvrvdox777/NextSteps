@@ -61,8 +61,7 @@ Run these commands in Claude Code, from a terminal session:
 /plugin install next-steps@next-steps
 ```
 
-Then run `/reload-plugins` or restart Claude Code. The mod is active from the next answer on. Access to this
-private repository must be granted to your GitHub account before the first command works.
+Then run `/reload-plugins` or restart Claude Code. The mod is active from the next answer on.
 
 ## Turning on the voice (optional)
 
