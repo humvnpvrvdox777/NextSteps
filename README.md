@@ -149,6 +149,10 @@ mod. Architecture notes are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md); the a
 next-steps is an independent product. It is not affiliated with or endorsed by Anthropic. Claude and Claude Code
 are Anthropic's products.
 
+## Contact
+
+For questions, support and licensing: humvnpvrvdox@gmail.com
+
 ## License
 
 Commercial product. All rights reserved. Use is subject to the terms of purchase.
