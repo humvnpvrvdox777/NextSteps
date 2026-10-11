@@ -24,9 +24,9 @@ describe('steps', () => {
   })
 
   test('the Voice button says what the voice is doing', () => {
-    expect(voiceLabel(false, 'off')).toBe('Voice: off')
-    expect(voiceLabel(false, 'ready')).toBe('Voice: off')
-    expect(voiceLabel(true, 'ready')).toBe('Voice: on')
+    expect(voiceLabel(false, 'off')).toBe('Voice:')
+    expect(voiceLabel(false, 'ready')).toBe('Voice:')
+    expect(voiceLabel(true, 'ready')).toBe('Voice:')
     expect(voiceLabel(true, 'starting')).toBe('Voice: starting…')
     expect(voiceLabel(true, 'off')).toBe('Voice: starting…')
     expect(voiceLabel(true, 'failed')).toBe('Voice: unavailable')

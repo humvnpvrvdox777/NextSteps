@@ -124,16 +124,13 @@ export const handoffFor = (
   return refusal === 'no_composer' || ownsComposer ? 'copy' : 'refused'
 }
 
+// The label of the Voice dropdown: what it says about the voice, while the picked option says which one it is.
 export const voiceLabel = (isOn: boolean, state: Daemon, labels: Strings['voice'] = STRINGS.en.voice): string => {
-  if (!isOn) {
-    return labels.off
+  if (isOn && state === 'failed') {
+    return labels.unavailable
   }
 
-  if (state === 'ready') {
-    return labels.on
-  }
-
-  return state === 'failed' ? labels.unavailable : labels.starting
+  return isOn && state !== 'ready' ? labels.starting : labels.label
 }
 
 // What the band says once steps are in the prompt: the person sends it from the prompt, and by hand after a paste.

@@ -38,10 +38,14 @@ const busy = atom({ plugin: 'next-steps', key: 'busy' } as const, false)
 const chat = atom({ plugin: 'next-steps', key: 'chat' } as const, [])
 const draft = atom({ plugin: 'next-steps', key: 'draft' } as const, '')
 
-type Basic = Pick<Elements['terminal'], 'Box' | 'Button' | 'Text'>
+// A Select is not on every surface (not on mobile): the column draws the voice dropdown only where it is.
+type Basic = Pick<Elements['terminal'], 'Box' | 'Button' | 'Text'> & Partial<Pick<Elements['terminal'], 'Select'>>
 
 const PANE_ID = 'assistant'
 const VOICE_KEY = 'voice'
+// The store key of the voice file the person picked, and the dropdown's value that switches the voice off.
+const VOICE_FILE_KEY = 'voiceFile'
+const VOICE_OFF = 'off'
 const POLL_MS = 300
 const REPLY_TIMEOUT_MS = 300000
 const QUIT_TIMEOUT_MS = 3000
@@ -56,6 +60,11 @@ let queue: Promise<void> = Promise.resolve()
 let engine: Voice | null = null
 let homeOption = ''
 let voiceHome = ''
+// The voice file the person picked from the Voice dropdown (null: the language's own), and the voice files the folder
+// holds, read at the session start.
+let chosenVoice: string | null = null
+let voiceFiles: string[] = []
+const voiceFile = (): string => chosenVoice ?? strings.voiceModel
 let settings = settingsFrom({})
 // The texts of the language the plugin option picks; set by register, and read by every hook.
 let strings: Strings = STRINGS.en
@@ -199,7 +208,7 @@ const getVoice = ($: EngineInterface): Voice => {
       portsFor($),
       {
         python: `${voiceHome}\\venv\\Scripts\\python.exe`,
-        voice: `${voiceHome}\\voices\\${strings.voiceModel}`,
+        voice: `${voiceHome}\\voices\\${voiceFile()}`,
         cwd: $.plugin.root,
         startTimeoutMs: VOICE_START_TIMEOUT_MS,
         quitTimeoutMs: QUIT_TIMEOUT_MS,
@@ -308,6 +317,62 @@ const toggleVoice = ($: EngineInterface): Promise<boolean> =>
 
     return wanted
   })
+
+// The Voice dropdown: off switches the voice off; a voice file makes it the one read, and switches the voice on. The
+// daemon loads one file for its whole life, so a new file means a new daemon.
+const chooseVoice = ($: EngineInterface, value: string): Promise<void> =>
+  inOrder(async () => {
+    if (value === VOICE_OFF) {
+      await applyVoice($, false)
+
+      return
+    }
+
+    if (!voiceFileNames().includes(value) || ((await read($, voice)) && value === voiceFile())) {
+      return
+    }
+
+    chosenVoice = value
+    await $.store.set(VOICE_FILE_KEY, value)
+    await stopVoice($)
+
+    if (engine !== null) {
+      await engine.quit()
+      engine = null
+    }
+
+    await applyVoice($, true)
+  })
+
+// The dropdown's options: off, then every voice file the folder holds, shown without its extension.
+// The voice files the dropdown offers: the folder's, and the language's own in case the folder cannot be listed.
+const voiceFileNames = (): string[] => [...new Set([...voiceFiles, voiceFile()])]
+
+const voiceChoices = (): { value: string; label: string }[] => [
+  { value: VOICE_OFF, label: strings.voice.off },
+  ...voiceFileNames().map(file => ({ value: file, label: file.replace(/\.onnx$/, '') })),
+]
+
+const refreshVoices = async ($: EngineInterface) => {
+  try {
+    const entries = await $.fs.list(`${voiceHome}\\voices`)
+
+    voiceFiles = entries
+      .filter(entry => entry.kind === 'file' && entry.name.endsWith('.onnx'))
+      .map(entry => entry.name)
+      .sort()
+  } catch (error) {
+    voiceFiles = []
+    $.ui.log(`next-steps: the voice folder cannot be listed (${String(error)})`, { to: 'debug' })
+  }
+}
+
+// The voice the person picked earlier, kept in the store; null means the language's own.
+const storedVoice = async ($: EngineInterface): Promise<string | null> => {
+  const stored = await $.store.get(VOICE_FILE_KEY)
+
+  return typeof stored === 'string' && stored.endsWith('.onnx') ? stored : null
+}
 
 // A stored choice that could not be acted on at the session start (no band to draw on yet) is acted on with the
 // first answer that has one.
@@ -775,9 +840,11 @@ const column = (
   placedSteps: readonly string[],
   voiceOn: boolean,
   state: Daemon,
+  choices: readonly { value: string; label: string }[] | null,
+  picked: string,
   texts: Strings,
 ) => {
-  const { Box, Button, Text } = t
+  const { Box, Button, Select, Text } = t
   const shows = now === 'asking' || now === 'chatting' || now === 'replying'
 
   return (
@@ -804,12 +871,17 @@ const column = (
       )}
       {now !== 'chosen' && (
         <Box flexDirection="row" gap={2}>
-          <Button
-            key="voice"
-            hotkey="v"
-            label={voiceLabel(voiceOn, state, texts.voice)}
-            onPress={() => toggleVoice($).catch(() => {})}
-          />
+          {choices !== null && Select !== undefined && (
+            <Select
+              key="voice"
+              label={voiceLabel(voiceOn, state, texts.voice)}
+              options={choices}
+              value={picked}
+              onSelect={value => {
+                void chooseVoice($, value).catch(() => {})
+              }}
+            />
+          )}
           {voiceOn && state === 'ready' && (
             <Button key="stop" hotkey="s" label={texts.button.stop} onPress={() => stopVoice($).catch(() => {})} />
           )}
@@ -829,6 +901,8 @@ export const register: Register = (on, options) => {
     await $.command.register({ name: strings.command.name, description: strings.command.description })
 
     voiceHome = homeOption !== '' ? homeOption : `${(await $.env.get('USERPROFILE')) ?? ''}\\.claude\\voice`
+    chosenVoice = await storedVoice($)
+    await refreshVoices($)
     await endConversation($)
     await setPhase($, 'idle')
 
@@ -917,6 +991,8 @@ export const register: Register = (on, options) => {
 
     const how = await read($, via)
     const voiceOn = await read($, voice)
+    // The dropdown shows the voice in use, or off.
+    const picked = voiceOn ? voiceFile() : VOICE_OFF
     const state = await read($, daemon)
     const placedSteps = await read($, placed)
     // The band is one slot for every mod: what the others draw (the check-handoff-clean-B7 row)
@@ -939,7 +1015,7 @@ export const register: Register = (on, options) => {
                 rows={sprite.rows}
                 cells={sprite.cells}
               />
-              {column($, $.ui.resolve(e), now, frame, found, how, placedSteps, voiceOn, state, strings)}
+              {column($, $.ui.resolve(e), now, frame, found, how, placedSteps, voiceOn, state, voiceChoices(), picked, strings)}
             </Box>
           </Box>
         </Box>
@@ -964,7 +1040,7 @@ export const register: Register = (on, options) => {
               width={sprite.width}
               height={sprite.height}
             />
-            {column($, $.ui.resolve(e), now, undefined, found, how, placedSteps, voiceOn, state, strings)}
+            {column($, $.ui.resolve(e), now, undefined, found, how, placedSteps, voiceOn, state, e.surface === 'mobile' ? null : voiceChoices(), picked, strings)}
           </Box>
         </Box>
       </Box>

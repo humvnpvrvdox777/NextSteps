@@ -175,6 +175,12 @@ export const world = (on: On, entries: Readonly<Record<string, unknown>> = {}) =
 
     return { value: undefined }
   })
+  // The voice folder as the Voice dropdown lists it: the two voice files of the languages, unless a test names others.
+  let voices = ['en_US-ljspeech-high.onnx', 'it_IT-serena-high.onnx']
+
+  on('fs.list', () => ({
+    value: voices.map(name => ({ name, kind: 'file' as const, size: 1, mtimeMs: 0, isLink: false })),
+  }))
   mock.env(on, { USERPROFILE: 'C:\\Users\\tester' })
 
   on('session.start', (_$, e) => ({ cwd: e.cwd }))
@@ -358,6 +364,9 @@ export const world = (on: On, entries: Readonly<Record<string, unknown>> = {}) =
     advance: async (ms: number) => {
       await clock.advance(ms)
       await clock.settle()
+    },
+    setVoices: (names: string[]) => {
+      voices = names
     },
     setReply: (next: ModelForkResult) => {
       reply = next

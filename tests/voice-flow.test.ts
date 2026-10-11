@@ -26,6 +26,14 @@ const answer = async ($: Engine, w: World) => {
 
 const labelOf = async (band: Band, key: string) => (await band.find({ type: 'Button', key }))?.props.label
 
+// The Voice control is a dropdown: its label says the state, its value says which voice is in use, or 'off'.
+const VOICE_FILE = 'en_US-ljspeech-high.onnx'
+const voiceLabelOf = async (band: Band) => (await band.find({ type: 'Select', key: 'voice' }))?.props.label
+const pickOf = async (band: Band) => (await band.find({ type: 'Select', key: 'voice' }))?.props.value
+const pickVoice = (band: Band, value: string) => band.select({ plugin: 'next-steps', key: 'voice', value })
+// What the old Voice button did: off becomes the voice in use, and the voice in use becomes off.
+const toggleVoiceChoice = async (band: Band) => pickVoice(band, (await pickOf(band)) === 'off' ? VOICE_FILE : 'off')
+
 const stepButtons = async (band: Band) =>
   (await band.findAll({ type: 'Button' })).filter(button => /^[123]$/.test(String(button.props.hotkey)))
 
@@ -44,7 +52,7 @@ describe('voice flow', () => {
     expect(w.daemon.spawns).toHaveLength(0)
     expect(w.daemon.requests).toHaveLength(0)
     expect(await stepButtons(band)).toHaveLength(3)
-    expect(await labelOf(band, 'voice')).toBe('Voice: off')
+    expect(await pickOf(band)).toBe('off')
   })
 
   test('a stored choice starts the daemon at session start: no shell, the port left to the system, the secret in its environment', async ($, on) => {
@@ -82,7 +90,7 @@ describe('voice flow', () => {
     expect(w.seen.prompts).toHaveLength(1)
     expect(await band.find({ type: 'Text', text: 'Reading the answer to you' })).toBeDefined()
     expect(await stepButtons(band)).toHaveLength(0)
-    expect(await labelOf(band, 'voice')).toBe('Voice: on')
+    expect(await pickOf(band)).toBe(VOICE_FILE)
   })
 
   test('when the reading ends the mascot asks aloud, reads the three options and shows the buttons', async ($, on) => {
@@ -201,7 +209,7 @@ describe('voice flow', () => {
 
     expect(w.daemon.quits).toBe(1)
   })
-  test('the Voice button turns the voice on and starts the daemon, and again off and quits it, remembering each choice', async ($, on) => {
+  test('the Voice dropdown turns the voice on and starts the daemon, and again off and quits it, remembering each choice', async ($, on) => {
     const w = world(on)
 
     await $.session.start(SESSION)
@@ -209,24 +217,24 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await labelOf(band, 'voice')).toBe('Voice: off')
+    expect(await pickOf(band)).toBe('off')
 
-    await band.press({ key: 'voice' })
+    await toggleVoiceChoice(band)
     await w.advance(0)
 
     expect(w.daemon.spawns).toHaveLength(1)
-    expect(await labelOf(band, 'voice')).toBe('Voice: on')
+    expect(await pickOf(band)).toBe(VOICE_FILE)
     expect(w.store.get('voice')).toBe(true)
 
-    await band.press({ key: 'voice' })
+    await toggleVoiceChoice(band)
     await w.advance(0)
 
     expect(w.daemon.quits).toBe(1)
-    expect(await labelOf(band, 'voice')).toBe('Voice: off')
+    expect(await pickOf(band)).toBe('off')
     expect(w.store.get('voice')).toBe(false)
   })
 
-  test('the Voice button says the daemon is starting until it is ready', async ($, on) => {
+  test('the Voice dropdown says the daemon is starting until it is ready', async ($, on) => {
     const w = world(on)
 
     w.daemon.isSilent = true
@@ -235,10 +243,10 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    await band.press({ key: 'voice' })
+    await toggleVoiceChoice(band)
     await w.advance(0)
 
-    expect(await labelOf(band, 'voice')).toBe('Voice: starting…')
+    expect(await voiceLabelOf(band)).toBe('Voice: starting…')
   })
 
   test('a daemon that cannot start turns the voice back off, and a toast says why without the secret', async ($, on) => {
@@ -250,12 +258,12 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    await band.press({ key: 'voice' })
+    await toggleVoiceChoice(band)
     await w.advance(0)
 
     const token = w.daemon.spawns[0]!.env!.VOICED_TOKEN!
 
-    expect(await labelOf(band, 'voice')).toBe('Voice: off')
+    expect(await pickOf(band)).toBe('off')
     expect(w.seen.toasts.some(toast => toast.includes(TOAST.voiceFailed) && toast.includes('cannot load the voice: no such file'))).toBe(true)
     expect(w.seen.toasts.join(' ')).not.toContain(token)
     expect(w.store.get('voice')).toBe(false)
@@ -274,14 +282,14 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'desktop')
 
-    await band.press({ key: 'voice' })
+    await toggleVoiceChoice(band)
     await w.advance(VOICE_START_TIMEOUT_MS - 1)
 
-    expect(await labelOf(band, 'voice')).toBe('Voice: starting…')
+    expect(await voiceLabelOf(band)).toBe('Voice: starting…')
 
     await w.advance(1)
 
-    expect(await labelOf(band, 'voice')).toBe('Voice: off')
+    expect(await pickOf(band)).toBe('off')
     expect(w.seen.toasts.some(toast => toast.includes(`not ready in ${VOICE_START_TIMEOUT_MS / 1000} s`))).toBe(true)
   })
 
@@ -304,7 +312,7 @@ describe('voice flow', () => {
 
     expect(w.daemon.spoken).toHaveLength(0)
     expect(await stepButtons(band)).toHaveLength(3)
-    expect(await labelOf(band, 'voice')).toBe('Voice: starting…')
+    expect(await voiceLabelOf(band)).toBe('Voice: starting…')
     // Nothing even tried to speak through a voice that was not ready.
     expect(w.seen.logs.filter(line => line.text.includes('could not speak'))).toEqual([])
     expect(w.seen.toasts).toEqual([])
@@ -343,7 +351,7 @@ describe('voice flow', () => {
 
     expect(await band.find({ type: 'Button', key: 'stop' })).toBeUndefined()
 
-    await band.press({ key: 'voice' })
+    await toggleVoiceChoice(band)
     await w.advance(0)
 
     expect(await band.find({ type: 'Button', key: 'stop' })).toBeDefined()
@@ -391,7 +399,7 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await labelOf(band, 'voice')).toBe('Voice: unavailable')
+    expect(await voiceLabelOf(band)).toBe('Voice: unavailable')
     expect(await band.find({ type: 'Button', key: 'stop' })).toBeUndefined()
     expect(w.seen.toasts).toEqual([TOAST.voiceLost])
     expect(w.daemon.spoken).toHaveLength(0)
@@ -408,7 +416,7 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await labelOf(band, 'voice')).toBe('Voice: on')
+    expect(await pickOf(band)).toBe(VOICE_FILE)
     expect(await band.find({ type: 'Button', key: 'stop' })).toBeDefined()
     expect(w.seen.toasts).toEqual([TOAST.voiceSkipped])
 
@@ -441,11 +449,11 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    await band.press({ key: 'voice' })
+    await toggleVoiceChoice(band)
     await w.advance(0)
 
     // The daemon is told to quit before it is ready: the kit's fake child ends only when it is made to.
-    const off = band.press({ key: 'voice' })
+    const off = toggleVoiceChoice(band)
 
     await w.advance(0)
     w.killDaemon()
@@ -454,7 +462,7 @@ describe('voice flow', () => {
     await w.advance(0)
 
     expect(w.seen.toasts).toEqual([])
-    expect(await labelOf(band, 'voice')).toBe('Voice: off')
+    expect(await pickOf(band)).toBe('off')
     expect(w.store.get('voice')).toBe(false)
   })
 
@@ -491,7 +499,7 @@ describe('voice flow', () => {
     expect(w.store.get('voice')).toBe(true)
     expect(w.seen.toasts).toEqual([])
     expect(w.daemon.spawns).toHaveLength(2)
-    expect(await labelOf(band, 'voice')).toBe('Voice: on')
+    expect(await pickOf(band)).toBe(VOICE_FILE)
   })
 
   test('a daemon that dies in the same breath as its ready line is shown as unavailable, not as active', async ($, on) => {
@@ -504,7 +512,7 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await labelOf(band, 'voice')).toBe('Voice: unavailable')
+    expect(await voiceLabelOf(band)).toBe('Voice: unavailable')
     expect(w.seen.toasts).toEqual([TOAST.voiceLost])
     expect(w.daemon.spoken).toHaveLength(0)
   })
@@ -535,7 +543,7 @@ describe('voice flow', () => {
 
     expect(w.daemon.quits).toBe(0)
     expect(w.daemon.spawns).toHaveLength(1)
-    expect(await labelOf(band, 'voice')).toBe('Voice: on')
+    expect(await pickOf(band)).toBe(VOICE_FILE)
     expect(w.daemon.spoken.length).toBeGreaterThan(0)
   })
 
@@ -606,7 +614,7 @@ describe('voice flow', () => {
     const band = await mountBand($, 'terminal')
 
     for (let press = 0; press < 3; press += 1) {
-      await band.press({ key: 'voice' })
+      await toggleVoiceChoice(band)
       await w.advance(0)
     }
 
@@ -632,4 +640,60 @@ describe('voice flow', () => {
     expect(w.daemon.requests.filter(request => request.path === '/speak').every(request => request.method === 'POST' && typeof request.body?.text === 'string')).toBe(true)
     expect(w.daemon.requests.filter(request => request.path === '/status').every(request => request.method === 'GET')).toBe(true)
   })
+
+  test('the Voice dropdown lists Off and every voice file of the folder, with the one in use picked', async ($, on) => {
+    const w = world(on)
+
+    await $.session.start(SESSION)
+    await answer($, w)
+
+    const band = await mountBand($, 'terminal')
+    const select = await band.find({ type: 'Select', key: 'voice' })
+
+    expect((select?.props.options as { value: string }[]).map(option => option.value)).toEqual([
+      'off',
+      'en_US-ljspeech-high.onnx',
+      'it_IT-serena-high.onnx',
+    ])
+    expect(select?.props.value).toBe('off')
+  })
+
+  test('picking a voice file starts the daemon with that file, and the choice is kept for the next session', async ($, on) => {
+    const w = world(on)
+
+    await $.session.start(SESSION)
+    await answer($, w)
+
+    const band = await mountBand($, 'terminal')
+
+    await pickVoice(band, 'it_IT-serena-high.onnx')
+    await w.advance(0)
+
+    expect(w.daemon.spawns.at(-1)?.argv.at(-1)).toBe(`${HOME}\\voices\\it_IT-serena-high.onnx`)
+    expect(w.store.get('voiceFile')).toBe('it_IT-serena-high.onnx')
+    expect(await pickOf(band)).toBe('it_IT-serena-high.onnx')
+  })
+
+  test('a voice picked earlier is the one the daemon starts with in a new session', async ($, on) => {
+    const w = world(on, { voice: true, voiceFile: 'it_IT-serena-high.onnx' })
+
+    await withVoice($, w)
+
+    expect(w.daemon.spawns[0]?.argv.at(-1)).toBe(`${HOME}\\voices\\it_IT-serena-high.onnx`)
+  })
+
+  test('Off in the dropdown switches the voice off, and the band shows Off', async ($, on) => {
+    const w = world(on, { voice: true })
+
+    await withVoice($, w)
+    await answer($, w)
+
+    const band = await mountBand($, 'terminal')
+
+    await pickVoice(band, 'off')
+
+    expect(await pickOf(band)).toBe('off')
+    expect(w.store.get('voice')).toBe(false)
+  })
+
 })

@@ -17,7 +17,7 @@ export type Strings = {
   ordinals: readonly [string, string, string]
   // The mascot's line for each phase. The dots of the thinking lines are added by the caller.
   line: { reading: string; thinking: string; replying: string; chatting: string; copied: string; written: string }
-  voice: { off: string; on: string; starting: string; unavailable: string }
+  voice: { label: string; off: string; starting: string; unavailable: string }
   placed: { prompt: (count: number, total: number) => string; clipboard: (count: number, total: number) => string }
   button: { talk: string; stop: string }
   pane: {
@@ -71,7 +71,7 @@ const EN: Strings = {
     copied: 'Copied: paste it with Ctrl+V',
     written: 'Okay, I will write it into the prompt',
   },
-  voice: { off: 'Voice: off', on: 'Voice: on', starting: 'Voice: starting…', unavailable: 'Voice: unavailable' },
+  voice: { label: 'Voice:', off: 'Off', starting: 'Voice: starting…', unavailable: 'Voice: unavailable' },
   placed: {
     prompt: (count, total) => `In the prompt: ${count} of ${total}. Press Enter in the prompt to send them.`,
     clipboard: (count, total) =>
@@ -140,7 +140,7 @@ const IT: Strings = {
     copied: 'Copiato: incollalo con Ctrl+V',
     written: 'Ok, te lo scrivo nel prompt',
   },
-  voice: { off: 'Voce: spenta', on: 'Voce: attiva', starting: 'Voce: avvio…', unavailable: 'Voce: non disponibile' },
+  voice: { label: 'Voce:', off: 'Spenta', starting: 'Voce: avvio…', unavailable: 'Voce: non disponibile' },
   placed: {
     prompt: (count, total) => `Nel prompt: ${count} di ${total}. Premi Invio nel prompt per mandarli.`,
     clipboard: (count, total) => `Negli appunti: ${count} di ${total}. Incollali nel prompt con Ctrl+V, poi premi Invio.`,

@@ -29,8 +29,8 @@ describe('language', () => {
   test('the lines and labels come in the language they are asked for, English by default', () => {
     expect(lineFor('asking', 0)).toBe('How do you want to continue?')
     expect(lineFor('asking', 0, 'prompt', STRINGS.it)).toBe('Come vuoi proseguire?')
-    expect(voiceLabel(true, 'ready')).toBe('Voice: on')
-    expect(voiceLabel(true, 'ready', STRINGS.it.voice)).toBe('Voce: attiva')
+    expect(voiceLabel(true, 'ready')).toBe('Voice:')
+    expect(voiceLabel(true, 'ready', STRINGS.it.voice)).toBe('Voce:')
     expect(placedLine(1, 3, 'clipboard', STRINGS.it.placed)).toBe(
       'Negli appunti: 1 di 3. Incollali nel prompt con Ctrl+V, poi premi Invio.',
     )
