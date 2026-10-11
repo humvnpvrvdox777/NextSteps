@@ -9,6 +9,11 @@ It works in the Claude Code desktop app and in the terminal. You can also turn o
 answer aloud, and open a side assistant to think through the next step before you commit to a request for your
 project.
 
+## Support
+
+next-steps is free and open source. If it saves you time, you can support its development on PayPal:
+[paypal.me/bside777](https://paypal.me/bside777).
+
 ## Highlights
 
 - **Three suggested next steps after each answer.** Roles are fixed and predictable: continue, verify, or try a
@@ -18,7 +23,7 @@ project.
 - **You stay in control.** Suggestions never submit themselves. You review, edit and send.
 - **Local voice (optional).** A Piper text-to-speech voice runs on your machine. It reads the answer and then the
   three options. Nothing is streamed to the cloud, and no audio is stored.
-- **Discutiamone, a side assistant.** Talk the problem through in a separate conversation that does not touch your
+- **Talk it over, a side assistant.** Talk the problem through in a separate conversation that does not touch your
   project. When you agree on a request, it proposes it in an editable field; you copy it or send it yourself.
 - **Built to stay out of your way.** The band yields to running turns and surveys, and a failed suggestion never
   interrupts your work.
@@ -45,7 +50,7 @@ one per line. Paste them with Ctrl+V.
   2.1.286 and 2.1.295.
 - An active Claude account. Each suggestion and each assistant reply uses the model, as any Claude Code request
   does.
-- For the voice only: Python 3.12 and about 250 MB of disk space.
+- For the voice only: Python 3.12, about 250 MB of disk space, and one voice file: 109 MB for English, 114 MB for Italian.
 
 ## Installation
 
@@ -61,7 +66,8 @@ private repository must be granted to your GitHub account before the first comma
 
 ## Turning on the voice (optional)
 
-The voice is off by default. To set it up, create a folder with a Python virtual environment and the voice model:
+The voice is off by default. Each language has its own voice, and the mod uses the one that matches the `language`
+option. Create the Python environment once (Windows, Python 3.12):
 
 ```powershell
 $voice = "$env:USERPROFILE\.claude\voice"
@@ -70,7 +76,15 @@ python -m venv "$voice\venv"
 & "$voice\venv\Scripts\python.exe" -m pip install piper-tts==1.8.0
 ```
 
-Download the Italian voice (Serena, Piper `it_IT-serena-high`) into the same folder:
+Download the English voice (LJSpeech, public domain, 109 MB):
+
+```powershell
+$base = "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ljspeech/high"
+Invoke-WebRequest -Uri "$base/en_US-ljspeech-high.onnx" -OutFile "$voice\voices\en_US-ljspeech-high.onnx"
+Invoke-WebRequest -Uri "$base/en_US-ljspeech-high.onnx.json" -OutFile "$voice\voices\en_US-ljspeech-high.onnx.json"
+```
+
+If you use the Italian language, download the Italian voice (Serena, Piper `it_IT-serena-high`, 114 MB, CC-BY-4.0):
 
 ```powershell
 $base = "https://huggingface.co/rhasspy/piper-voices/resolve/main/it/it_IT/serena/high"
@@ -78,9 +92,9 @@ Invoke-WebRequest -Uri "$base/it_IT-serena-high.onnx" -OutFile "$voice\voices\it
 Invoke-WebRequest -Uri "$base/it_IT-serena-high.onnx.json" -OutFile "$voice\voices\it_IT-serena-high.onnx.json"
 ```
 
-Then press `v` in the band (or type `/voce`) to switch the voice on. If the folder is somewhere else, set the
-option `voiceHome` (see below). If the voice cannot start, next-steps says why in a notification and the voice
-stays off; everything else keeps working.
+Then press `v` in the band (or type `/voice`, or `/voice` in Italian) to switch the voice on. If the folder is somewhere
+else, set the option `voiceHome`. If the voice cannot start, the mod shows the reason and the voice stays off;
+everything else keeps working.
 
 ## Using it
 
@@ -88,11 +102,11 @@ stays off; everything else keeps working.
 | --- | --- | --- |
 | `1`, `2`, `3` | Terminal, with the prompt box empty | Adds that step to the prompt |
 | Click a step | Terminal and desktop app | Adds that step to the prompt |
-| `v` or **Voce** | The band | Switches the voice on or off |
+| `v` or **Voice** | The band | Switches the voice on or off |
 | `s` or **Stop** | The band, while the voice is on and ready | Stops the voice at once |
-| `d` or **Discutiamone** | The band | Opens the side assistant |
-| `/voce` | The prompt | Switches the voice on or off |
-| **Copia** / **Manda al progetto** | The assistant's panel, when it proposes a request | Copies the request, or sends it to the project as your own message |
+| `d` or **Talk it over** | The band | Opens the side assistant |
+| `/voice` | The prompt | Switches the voice on or off |
+| **Copy** / **Send to the project** | The assistant's panel, when it proposes a request | Copies the request, or sends it to the project as your own message |
 
 ## Settings
 
@@ -100,6 +114,7 @@ Set these in the plugin's options in Claude Code:
 
 | Option | Default | What it does |
 | --- | --- | --- |
+| `language` | `en` | `en` (English) or `it` (Italiano): the labels, the mascot's lines, the voice phrases and the voice file |
 | `assistantModel` | `claude-sonnet-5-5` | The model for the side assistant |
 | `assistantEffort` | `max` | How hard the assistant thinks: `low`, `medium`, `high`, `xhigh` or `max` |
 | `assistantMaxTokens` | `16000` | The longest reply the assistant may write (up to 64000) |
@@ -119,8 +134,8 @@ Values that cannot be used fall back to the defaults.
 
 ## Limitations
 
-- The voice works on Windows only, and reads Italian. English text is read with an Italian accent.
-- The mascot's own phrases are in Italian. The suggested steps follow the language of your last message.
+- The voice works on Windows only. Each language has its own voice: a text in one language read by the other voice sounds accented.
+- The labels and the mascot's phrases are in English by default; the `language` option (`en` or `it`) switches them. The suggested steps follow the language of your last message.
 - On the desktop app a chosen step goes to the clipboard, because the app owns the prompt box.
 
 ## Development
@@ -142,6 +157,7 @@ mod. Architecture notes are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md); the a
 - Voice: Serena, Piper `it_IT-serena-high`, trained on the dataset
   [committa/serena-synthetic-it-27h](https://huggingface.co/datasets/committa/serena-synthetic-it-27h). Licensed
   CC-BY-4.0. Voice files from [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices).
+- Voice: LJSpeech, Piper `en_US-ljspeech-high`, trained on the LJSpeech 1.1 dataset, which is public domain.
 - Speech engine: [Piper](https://github.com/rhasspy/piper) (`piper-tts`, GPL-3.0). It is installed in your own
   virtual environment and is not redistributed in this repository.
 - The mascot is an original pixel-art drawing inspired by Claude Code's banner.
@@ -153,6 +169,11 @@ are Anthropic's products.
 
 For questions, support and licensing: humvnpvrvdox@gmail.com
 
+## Support
+
+If next-steps is useful to you, you can support its development on PayPal:
+[paypal.me/bside777](https://paypal.me/bside777). Thank you.
+
 ## License
 
-Commercial product. All rights reserved. Use is subject to the terms of purchase.
+MIT License. Copyright (c) 2026 humvnpvrvdox777. See [LICENSE](LICENSE).

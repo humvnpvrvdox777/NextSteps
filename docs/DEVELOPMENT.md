@@ -8,11 +8,14 @@ you press a button.
 - **Three next steps**, by fixed roles chosen by the user: the natural continuation, a verification, an
   alternative. Pick any of them with `1`, `2` or `3` or by clicking; each goes into the prompt box, and the band
   stays until you send that prompt.
-- **Voce** (optional, off by default): the mascot reads the whole answer aloud, then asks "Come vuoi
-  proseguire?" and reads the three options. A local Piper voice, no network.
-- **Discutiamone**: a panel with a separate assistant that has its own conversation, apart from the project
-  chat. When you agree on a request it proposes it in an editable field, with **Copia** and **Manda al
-  progetto**.
+- **Voice** (optional, off by default): the mascot reads the whole answer aloud, then asks "How do you want to continue?" and reads the three options. A local Piper voice, no network.
+- **Talk it over** (Discutiamone): a panel with a separate assistant that has its own conversation, apart from the project
+  chat. When you agree on a request it proposes it in an editable field, with **Copy** and **Send to the project**.
+
+## Language
+
+The default is English. The plugin option `language` (`en` or `it`) sets the labels, the mascot's lines, the toasts, the panel and the voice phrases. The slash command is `/voice` in English and `/voce` in Italian. The suggested steps and the assistant's replies follow the language you write in. The voice follows the language
+too: LJSpeech for English, Serena for Italian.
 
 ## Behavior
 
@@ -31,25 +34,28 @@ you press a button.
   Choosing the same step again does nothing.
 - On the desktop the app draws its own prompt box, which the engine cannot write into (`$.prompt.fill`
   refuses with `no_composer`). There every chosen step so far is copied to the clipboard, one per line
-  (PowerShell `Set-Clipboard`, UTF-8), a toast says so and the band says "Negli appunti: 2 di 3 ... Incollali nel
-  prompt con Ctrl+V". The digit hotkeys also belong to the engine's own prompt box (terminal): on the desktop you
+  (PowerShell `Set-Clipboard`, UTF-8), a toast says so and the band says "On the clipboard: 2 of 3 ... Paste them into the
+  prompt with Ctrl+V". The digit hotkeys also belong to the engine's own prompt box (terminal): on the desktop you
   click.
 - A button's label is the whole step, never shortened: the band takes the room it needs and the label wraps onto
   more rows. The engine refuses a Button whose only child is a `Text`, unless it also has a label, so the step is
   the label. Whether the host wraps a long label on the terminal and on the desktop is not yet checked live.
-- The steps are written in the language of your last message. The mascot's own lines are Italian.
-- The band also holds three controls: **Voce** (`v`, says "Voce: spenta", "avvio…", "attiva" or "non
-  disponibile"), **Stop** (`s`, only while the voice is on and ready) and **Discutiamone** (`d`). Hotkeys
+- The steps are written in the language of your last message. The mascot's lines and the labels are English by default; the `language` option (`en` or `it`) switches them.
+- The band also holds three controls: **Voice** (`v`, says "Voice: off", "starting…", "on" or "unavailable"), **Stop** (`s`, only while the voice is on and ready) and **Talk it over** (`d`). Hotkeys
   work where the band holds the keyboard (the terminal). The slash command `/voce` switches the voice too.
 
 ## The voice
 
-- Engine: Piper `it_IT-serena-high`, run by a small Python daemon (`voiced/`) that the mod starts with
+- Engine: Piper, run by a small Python daemon (`voiced/`) that the mod starts with
   `$.process.spawn` when the voice is switched on, or at session start when the stored choice is on. The
   choice is kept with `$.store` and survives sessions. Default: off.
+- Voices: the mod starts the voice of its language: `en_US-ljspeech-high` for English and `it_IT-serena-high` for
+  Italian (see Credit).
 - Credit (CC-BY-4.0): voice Serena, Piper `it_IT-serena-high`, trained from scratch on the dataset
   `committa/serena-synthetic-it-27h`. Piper itself is GPL-3.0; it is used as a library inside the user's own
   virtual environment and is not redistributed here.
+- Credit (public domain): voice LJSpeech, Piper `en_US-ljspeech-high`, trained on the LJSpeech 1.1 dataset
+  (keithito.com/LJ-Speech-Dataset).
 - The daemon listens on `127.0.0.1` only, on a port the system picks (`--port 0`) and prints as
   `ready <port>`. Every request carries a random secret in the header `x-token`; the secret reaches the child
   through its environment (`VOICED_TOKEN`), never through the arguments, and is masked in any message. Start-up
@@ -70,7 +76,7 @@ you press a button.
   the reading ends first the mascot thinks until the steps arrive; if the steps come first they wait for the
   voice. **Stop** silences the voice at once; the options are then shown but not read.
 - Failures: a daemon that cannot start turns the voice back off and a toast names the reason (never the
-  secret); a daemon that dies later leaves "Voce: non disponibile" and a toast (the Stop button goes away and
+  secret); a daemon that dies later leaves "Voice: unavailable" and a toast (the Stop button goes away and
   nothing is read until you switch the voice off and on); a daemon that only refuses one chunk stays "attiva",
   with one toast for that answer; switching the voice off while it starts is not a failure; the answer is never
   held up.
@@ -81,7 +87,7 @@ you press a button.
 
 ## The assistant
 
-- **Discutiamone** opens a panel (`Pane`, id `assistant`) with the conversation and a field. The assistant
+- **Talk it over** (Discutiamone) opens a panel (`Pane`, id `assistant`) with the conversation and a field. The assistant
   opens with a fixed greeting, spoken once if the voice is on. Typing and pressing Enter runs one turn:
   `$.model.complete` with the assistant's own system prompt. Nothing of this conversation is written to the
   project transcript or its prompt cache. The field is replaced by a new one (a new `key`) after each message
@@ -95,10 +101,10 @@ you press a button.
   characters) and this conversation (at most 30 lines). The quoted material is data, not instructions.
 - It answers in `<say>` tags, in the language of your last message, one to three sentences; the reply is
   shown and spoken when the voice is on. A reply without `<say>` is shown as it came and logged.
-- **Annulla** frees the panel at once and drops the answer when it arrives. A failed call is explained in one
-  Italian line (rate limit, network, empty reply, too slow); those lines are never sent back to the model.
+- **Cancel** frees the panel at once and drops the answer when it arrives. A failed call is explained in one
+  line (rate limit, network, empty reply, too slow); those lines are never sent back to the model.
 - Hand-off: when you and the assistant agree, it adds the request in `<handoff>` tags. The panel shows it in an
-  editable field with **Copia** (clipboard) and **Manda al progetto** (`$.prompt.submit({ text, asUser: true })`,
+  editable field with **Copy** (clipboard) and **Send to the project** (`$.prompt.submit({ text, asUser: true })`,
   your own words). Nothing is sent or copied without a press; an empty field does nothing. After either the
   conversation ends: the panel closes, the history is cleared. If a hook beneath the plugin refuses the prompt,
   a toast says so and the proposal stays. What you change in the proposal is kept when you press Enter in it,
@@ -125,12 +131,12 @@ The band has seven phases; each animation says something about the phase:
 | Phase | When | What the mascot does | What it says |
 | --- | --- | --- | --- |
 | `idle` | nothing to ask | not drawn, no timer runs | |
-| `reading` | the voice reads the answer | a quick bob, one wave of the arm, a blink, every 12 ticks | "Ti leggo la risposta" |
-| `thinking` | the side question is in flight | glances up, left, up, right and taps its feet | "Sto pensando a come proseguire" with cycling dots (three still dots on the desktop) |
-| `asking` | the three steps are ready | hops and waves one arm for about a second, then breathes, blinks every 3.4 s and glances toward the options | "Come vuoi proseguire?" and the three steps |
-| `chatting` | the panel is open | looks toward it, a slow breath and a blink | "Ne parliamo: scrivi nel pannello" |
-| `replying` | the assistant is working | the thinking pose | "Ci penso..." |
-| `chosen` | the proposal was copied from the panel (**Copia**) | hops with happy eyes for about 0.8 s, then the band goes away | "Copiato: incollalo con Ctrl+V" |
+| `reading` | the voice reads the answer | a quick bob, one wave of the arm, a blink, every 12 ticks | "Reading the answer to you" |
+| `thinking` | the side question is in flight | glances up, left, up, right and taps its feet | "Thinking about how to continue" with cycling dots (three still dots on the desktop) |
+| `asking` | the three steps are ready | hops and waves one arm for about a second, then breathes, blinks every 3.4 s and glances toward the options | "How do you want to continue?" and the three steps |
+| `chatting` | the panel is open | looks toward it, a slow breath and a blink | "Talking it over: write in the panel" |
+| `replying` | the assistant is working | the thinking pose | "Thinking it over..." |
+| `chosen` | the proposal was copied from the panel (**Copy**) | hops with happy eyes for about 0.8 s, then the band goes away | "Copied: paste it with Ctrl+V" |
 
 A pose is a pure function of `(phase, tick)` at 140 ms per tick (`poseFor`), so the animation is testable
 with a mocked clock. `timelineFor(phase)` samples it into an intro played once and a loop that repeats
@@ -224,7 +230,7 @@ Flow:
 4. `ui.render` on `AbovePrompt` draws the mascot and a column with the line, the three plain `Button`s, a check on each step already in the prompt, while
    `asking`, `chatting` or `replying`, and the controls. It yields to the engine while a survey holds the band,
    a turn is running, or the phase is `idle` or `asking` with no steps. `ui.render` on `Pane` (`assistant`)
-   draws the conversation, the field, **Annulla** while busy, and the proposal with its two buttons.
+   draws the conversation, the field, **Cancel** while busy, and the proposal with its two buttons.
 5. A press on a step that is not in `placed` reads the prompt box and calls `$.prompt.fill` with `fillFor`; when
    the box took the text the step joins `placed` and the phase stays as it is. If it did not,
    `handoffFor(refusal, ownsComposer)` decides: `copy` copies every step in `placed` plus this one to the
@@ -233,7 +239,7 @@ Flow:
 6. `turn.start`, `prompt.submit` and `session.end` bump the generation, stop the voice, end the conversation
    and set the phase `idle`; `prompt.submit` does it only once the prompt has entered (a hook beneath may drop
    it, and then nothing changes); `session.end` also quits the daemon unless the process goes on (`clear`,
-   `resume`). **Copia** and **Manda al progetto** bump the generation too, so steps still in
+   `resume`). **Copy** and **Send to the project** bump the generation too, so steps still in
    the making cannot bring the band back for an episode the user has already closed. `session.start` resets the
    state (after a hot reload the module's variables restart, the state persists) and starts the daemon when
    the stored choice is on and a band is drawn, without waiting for it.
@@ -248,11 +254,16 @@ stored choice of the voice (`$.store`) belongs to the plugin's identity, so a ch
 from a session's mods folder (`next-steps@inline`) is not seen here: switch the voice on once more.
 
 The voice lives in `~\.claude\voice\` (the option `voiceHome` changes it): `venv\` with `piper-tts` and its
-libraries, `voices\it_IT-serena-high.onnx` and its `.json`, and `CREDITS.md`. Nothing needs downloading when the
+libraries, `voices\it_IT-serena-high.onnx` and its `.json` (Italian), `voices\en_US-ljspeech-high.onnx` and its `.json`
+(English), and `CREDITS.md`. Nothing needs downloading when the
 files of the earlier listening test are at hand: create a venv (`python -m venv venv`), copy the installed
 package folders (`flatbuffers`, `google`, `numpy`, `numpy.libs`, `onnxruntime`, `packaging`, `pathvalidate`,
 `piper` and their `dist-info`) into `venv\Lib\site-packages`, and copy the voice. About 250 MB on disk. Without
-it the mod works as before: pressing Voce gives a toast that names the missing file and the voice stays off.
+it the mod works as before: pressing Voice gives a toast that names the missing file and the voice stays off.
+
+The English voice is one download, 109 MB: `en_US-ljspeech-high.onnx` and `en_US-ljspeech-high.onnx.json` from
+`https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ljspeech/high/`, into `voices\`. The Italian one
+is the Serena file above (114 MB). Both are read by the same daemon: the mod picks the file by the `language` option.
 
 ## Verification
 
@@ -286,7 +297,7 @@ it the mod works as before: pressing Voce gives a toast that names the missing f
   seeked to the middle of its tick, and the screenshot is compared pixel for pixel with the art of `poseFor`:
   0 cells differ, and a deliberate offset of one tick makes 92 differ, so the check can fail.
 - Live check with the user in the desktop app: the voice reads, Stop is immediate, a new prompt cuts the
-  voice, Discutiamone opens the panel, a reply arrives, the proposal appears, Copia and Manda work, voice off
+  voice, Talk it over opens the panel, a reply arrives, the proposal appears, Copy and Send work, voice off
   leaves no `python` running.
 - Not yet looked at live (version 0.4.0): a long step wraps onto more rows on the terminal and on the desktop;
   the frame and the mascot at 60%; picking all three, then sending from the prompt makes the band go away.
