@@ -115,8 +115,9 @@ Set these in the plugin's options in Claude Code. Values that cannot be used fal
 
 ## Privacy
 
-- **Suggestions** send each finished answer to the model under your own account: the whole answer, or its end if it is
-  very long.
+- **Suggestions** send each finished answer to the model under your own account, in one short completion on Sonnet 5.5:
+  the end of the answer (its last 6000 characters) and the message that started the turn (its first 500 characters).
+  The conversation itself is never sent.
 - **The assistant** sends each of your messages to the model, in its own conversation. That conversation is not
   written into your project or its transcript.
 - **The voice** runs locally. The text goes to a Piper process listening on `127.0.0.1` only, behind a secret that

@@ -3,7 +3,10 @@ import { describe, expect, test } from 'claude-code/testing'
 import {
   CLIPBOARD_ARGV,
   MAX_ANSWER_CHARS,
+  MAX_REQUEST_CHARS,
   STEP_CRITERIA,
+  STEPS_MAX_TOKENS,
+  STEPS_MODEL,
   VOICE_START_TIMEOUT_MS,
   buildPrompt,
   fillFor,
@@ -98,6 +101,26 @@ describe('steps', () => {
     expect(prompt).toContain(STEP_CRITERIA)
     expect(prompt).toContain('<answer>\nThe answer text\n</answer>')
     expect(prompt).toContain('<steps></steps>')
+  })
+
+  test('buildPrompt quotes what the person asked, ahead of the answer', () => {
+    const prompt = buildPrompt('The answer text', 'Fix the filter so it skips short answers')
+
+    expect(prompt).toContain('<request>\nFix the filter so it skips short answers\n</request>')
+    // The tags are named in the instructions too: compare the blocks, which start on their own line.
+    expect(prompt.indexOf('\n<request>\n')).toBeLessThan(prompt.indexOf('\n<answer>\n'))
+  })
+
+  test('buildPrompt has no request section when there is no request', () => {
+    expect(buildPrompt('The answer text')).not.toContain('<request>')
+    expect(buildPrompt('The answer text', '   ')).not.toContain('<request>')
+  })
+
+  test('buildPrompt keeps only the start of a very long request', () => {
+    const prompt = buildPrompt('The answer text', `START${'x'.repeat(MAX_REQUEST_CHARS)}END`)
+
+    expect(prompt).toContain('START')
+    expect(prompt).not.toContain('END')
   })
 
   test('buildPrompt keeps only the tail of a very long answer', () => {

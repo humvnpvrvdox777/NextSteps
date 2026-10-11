@@ -103,7 +103,7 @@ the file of the new language.
   (not known; the test kit cannot show it).
 - Model: `claude-sonnet-5-5`, effort `max`, reply cap 16000 tokens, at most 5 minutes a reply. All are plugin
   options (`assistantModel`, `assistantEffort`, `assistantMaxTokens`, up to 64000); an unusable value falls
-  back to the default. The three first steps keep using `$.model.fork`, not this model.
+  back to the default. The three steps are one short completion on `claude-sonnet-5-5` (`STEPS_MODEL`), not this model.
 - What it is told: its role (an advisor beside the coding assistant that cannot touch the project), a digest of
   the last 8 project messages (each cut to 1500 characters), the coding assistant's last answer (its last 6000
   characters) and this conversation (at most 30 lines). The quoted material is data, not instructions.
@@ -177,12 +177,12 @@ which is how the tests count redraws.
 
 | Decision | Choice | Why |
 | --- | --- | --- |
-| Where the steps come from | A side question to the model (`$.model.fork`) after each answer | Keeps the transcript clean; the prefix is served from the prompt cache. Costs one extra call per qualifying answer. |
+| Where the steps come from | One short completion (`$.model.complete`, `claude-sonnet-5-5`) after each answer, over the answer and the message that started the turn | A fork re-read the whole conversation at every answer (about 230 k tokens per answer in a long session); this call sends about 2 k. Costs one extra call per qualifying answer. |
 | What a choice does | Writes each chosen step into the prompt box (`$.prompt.fill`), never submits | The message comes from your keyboard, can be edited, and a step with effects (commit, push, install) is never sent unreviewed. The band stays until the prompt is sent, so all three can be picked first. |
 | What the steps are | Roles 1 / 2 / 3 above, in `STEP_CRITERIA` (`hooks/steps.ts`) | Set by the user. Edit that constant to change them. |
-| Output format | Steps wrapped in `<steps>` tags, read from inside the tags only | The fork shares the main thread's system prompt, so an output style may add text around the reply. |
+| Output format | Steps wrapped in `<steps>` tags, read from inside the tags only | The model may write text around the tags; only what is inside them is read. |
 | Failures | Nothing is shown and nothing is raised on screen, except a toast when the voice fails; the reason goes to the debug log | A convenience feature must never interrupt the work. |
-| Stalled call | After 30 s without a reply the steps are given up (the phase goes to `idle` once any reading ends) and the late reply is dropped | `$.model.fork` has no timeout of its own. |
+| Stalled call | After 30 s without a reply the steps are given up (the phase goes to `idle` once any reading ends) and the late reply is dropped | The timer only stops waiting: the call itself is not cancelled. |
 | Phase changes | Serialized through one promise queue; only the latest requested phase is applied | A prompt, a clear or a timeout can land between two state writes; this keeps state and timer consistent. |
 | Animation | One pure pose function. Terminal: a timer drives the redraw. Desktop: a self-playing SMIL film strip sampled from the same function | A redraw resets the hover on the desktop; the terminal has no SMIL. Both are tested against `poseFor`. |
 | Pixel shape | Pixels twice as tall as wide on both surfaces | The art is quarter-block art; square pixels stretch it to 3.2:1. |
@@ -229,8 +229,9 @@ Flow:
    so the turn is not held up.
 2. The work gives up if `mine` is no longer current. With the voice on and ready it sets the phase `reading`
    and reads the answer (`speakable`, then `voice.speak`, then polling `isSpeaking` every 300 ms); otherwise
-   `thinking`. In parallel `findSteps` calls `$.model.fork` (at most 30 s) with a prompt that carries the
-   answer (its last 6000 characters) and the three roles. The guard is checked again after every await.
+   `thinking`. In parallel `findSteps` calls `$.model.complete` on `claude-sonnet-5-5` (waits at most 30 s) with a
+   prompt that carries the message that started the turn (its first 500 characters), the answer (its last 6000
+   characters) and the three roles. The guard is checked again after every await.
 3. `parseSteps` reads the lines inside `<steps>`: exactly three non-empty lines are accepted, anything else
    is dropped. When the reading and the steps are both done: no steps, back to `idle`; steps while the user
    talks, only added (and when there are none the band and the panel stay as they are); otherwise the phase
@@ -278,7 +279,7 @@ is the Serena file above (114 MB). Both are read by the same daemon: the mod pic
 - `claude plugin validate <folder>` passes and lists the hooks (`session.start`, `command.run` for `voce`,
   `turn.start`, `prompt.submit`, `session.end`, `turn.complete`, `ui.render` for `AbovePrompt` and `Pane`).
 - `tsc -p <folder>` reports no errors.
-- `claude plugin test <folder>` passes (290 tests at version 0.4.1): the pure modules, the full flow with a mocked clock, model,
+- `claude plugin test <folder>` passes (295 tests): the pure modules, the full flow with a mocked clock, model,
   store and a fake daemon (a child that prints `ready <port>` and answers the four routes), the band on
   `terminal` and `desktop`, the voice (start, toggle, failures, stop on every interruption), the reading flow,
   the conversation, the hand-off, the desktop band not being redrawn by the clock or by a reply, the SVG film

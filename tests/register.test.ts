@@ -2,6 +2,8 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { FRAME_COLOR, FRAME_MS, poseFor, toCells } from '../hooks/mascot'
 import {
+  STEPS_MAX_TOKENS,
+  STEPS_MODEL,
   SUGGEST_DELAY_MS,
   THINKING_TIMEOUT_MS,
   TOAST,
@@ -47,6 +49,28 @@ describe('register', () => {
     expect(await band.find({ type: 'Text', text: 'How do you want to continue?' })).toBeDefined()
     expect(w.seen.prompts).toHaveLength(1)
     expect(w.seen.prompts[0]).toContain(LONG_ANSWER)
+  })
+
+  test('the steps are for the message that started the turn, quoted ahead of the answer', async ($, on) => {
+    const w = world(on)
+
+    await $.session.start(SESSION)
+    await $.prompt.submit({ ...SUBMIT, text: 'Fix the filter so it skips short answers' })
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    expect(w.seen.prompts).toHaveLength(1)
+    expect(w.seen.prompts[0]).toContain('<request>\nFix the filter so it skips short answers\n</request>')
+  })
+
+  test('the steps come from one short completion on Sonnet, not from a fork of the conversation', async ($, on) => {
+    const w = world(on)
+
+    await $.session.start(SESSION)
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    expect(w.seen.steps).toEqual([{ model: STEPS_MODEL, effort: 'low', maxTokens: STEPS_MAX_TOKENS }])
   })
 
   test('the mascot goes under what the other mods draw in the band, never over it', async ($, on) => {
@@ -397,7 +421,7 @@ describe('register', () => {
   test('a model call that throws is caught, logged for debugging, and the band goes away', async ($, on) => {
     const w = world(on)
 
-    w.setForkFailing(true)
+    w.setStepsFailing(true)
     await $.session.start(SESSION)
     await $.turn.complete(TURN)
     await w.advance(SUGGEST_DELAY_MS)

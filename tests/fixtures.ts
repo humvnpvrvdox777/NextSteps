@@ -3,7 +3,6 @@ import type { Engine } from 'claude-code/testing'
 import type {
   HttpResponse,
   ModelCompleteResult,
-  ModelForkResult,
   On,
   RenderPropsOf,
   RenderSurface,
@@ -70,13 +69,13 @@ export const SUBMIT = {
 
 export const PORT = 51234
 
-export const answered = (text: string): ModelForkResult => ({
+export const answered = (text: string): ModelCompleteResult => ({
   isAnswered: true,
   text,
   usage: USAGE,
 })
 
-export const replyOf = (steps: readonly string[]): ModelForkResult =>
+export const replyOf = (steps: readonly string[]): ModelCompleteResult =>
   answered(`<steps>\n${steps.join('\n')}\n</steps>`)
 
 export const completed = (text: string): ModelCompleteResult => ({ isAnswered: true, text, usage: USAGE })
@@ -124,11 +123,11 @@ export const COMMAND = {
 export const world = (on: On, entries: Readonly<Record<string, unknown>> = {}) => {
   const clock = mock.clock(on)
   const store = new Map<string, unknown>(Object.entries(entries))
-  let reply: ModelForkResult = answered(REPLY)
+  let reply: ModelCompleteResult = answered(REPLY)
   let draft = ''
   let isFillable = true
   let clipboardExit = 0
-  let isForkFailing = false
+  let isStepsFailing = false
   let surfaces: readonly RenderSurface[] = ['terminal']
   let rows: readonly SessionMessage[] = []
   let submitDrop: string | null = null
@@ -146,6 +145,7 @@ export const world = (on: On, entries: Readonly<Record<string, unknown>> = {}) =
     toasts: [] as string[],
     runs: [] as { argv: readonly string[]; stdin: string | undefined }[],
     completes: [] as { model: string; system?: string; prompt: string; effort?: string; maxTokens?: number; timeoutMs?: number }[],
+    steps: [] as { model: string; effort?: string; maxTokens?: number }[],
     submits: [] as { text: string; origin: unknown }[],
     opened: [] as string[],
     // Everything a pane was opened with, not only its id.
@@ -221,17 +221,22 @@ export const world = (on: On, entries: Readonly<Record<string, unknown>> = {}) =
 
   on('session.messages', () => ({ value: rows as never }))
 
-  on('model.fork', async (_$, e) => {
-    seen.prompts.push(e.prompt)
-
-    const mine = reply
-
-    await (gates.shift() ?? Promise.resolve())
-
-    return isForkFailing ? { deny: 'fork refused' } : { value: mine }
-  })
-
   on('model.complete', async (_$, e, next) => {
+    // The steps are one completion over an answer: they get the reply the test set, and they are kept apart from the
+    // other completions, which the tests count.
+    if (e.prompt.includes('<answer>')) {
+      seen.prompts.push(e.prompt)
+      seen.steps.push({
+        model: e.model,
+        ...(e.effort === undefined ? {} : { effort: e.effort }),
+        ...(e.maxTokens === undefined ? {} : { maxTokens: e.maxTokens }),
+      })
+
+      await (gates.shift() ?? Promise.resolve())
+
+      return isStepsFailing ? { deny: 'steps refused' } : { value: reply }
+    }
+
     signals.push(next.signal)
     seen.completes.push({
       model: e.model,
@@ -368,7 +373,7 @@ export const world = (on: On, entries: Readonly<Record<string, unknown>> = {}) =
     setVoices: (names: string[]) => {
       voices = names
     },
-    setReply: (next: ModelForkResult) => {
+    setReply: (next: ModelCompleteResult) => {
       reply = next
     },
     setDraft: (text: string) => {
@@ -380,8 +385,8 @@ export const world = (on: On, entries: Readonly<Record<string, unknown>> = {}) =
     setClipboardExit: (code: number) => {
       clipboardExit = code
     },
-    setForkFailing: (value: boolean) => {
-      isForkFailing = value
+    setStepsFailing: (value: boolean) => {
+      isStepsFailing = value
     },
     setSurfaces: (next: readonly RenderSurface[]) => {
       surfaces = next

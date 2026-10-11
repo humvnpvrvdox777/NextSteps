@@ -20,6 +20,8 @@ import {
 import type { Flat, Language, LanguageOption, Strings } from './strings'
 import {
   CLIPBOARD_ARGV,
+  STEPS_MAX_TOKENS,
+  STEPS_MODEL,
   SUGGEST_DELAY_MS,
   THINKING_TIMEOUT_MS,
   VOICE_START_TIMEOUT_MS,
@@ -90,6 +92,8 @@ let uiLanguage: Language = DEFAULT_LANGUAGE
 let languageTurn = 0
 let strings: Strings = STRINGS.en
 let lastAnswer = ''
+// The person's last message: the steps of an answer are for what was asked (set by prompt.submit).
+let lastRequest = ''
 let isSilenced = false
 let isStepsReady = false
 let isAsking = false
@@ -916,7 +920,7 @@ const sendDraft = async ($: EngineInterface) => {
   await setPhase($, 'idle')
 }
 
-const findSteps = async ($: EngineInterface, answer: string): Promise<string[]> => {
+const findSteps = async ($: EngineInterface, answer: string, request: string): Promise<string[]> => {
   let giveUp: (reply: null) => void = () => {}
   const waiting = new Promise<null>(resolve => {
     giveUp = resolve
@@ -924,7 +928,13 @@ const findSteps = async ($: EngineInterface, answer: string): Promise<string[]> 
   const timeout = $.clock.after(THINKING_TIMEOUT_MS, () => giveUp(null))
 
   try {
-    const reply = await Promise.race([$.model.fork({ prompt: buildPrompt(answer) }), waiting])
+    const call = $.model.complete({
+      model: STEPS_MODEL,
+      prompt: buildPrompt(answer, request),
+      effort: 'low',
+      maxTokens: STEPS_MAX_TOKENS,
+    })
+    const reply = await Promise.race([call, waiting])
 
     if (reply === null) {
       return []
@@ -968,7 +978,7 @@ const suggest = async ($: EngineInterface, answer: string, mine: number) => {
     }
 
     const reading = isSpoken ? readAloud($, answer, mine).catch(() => {}) : Promise.resolve()
-    const found = await findSteps($, answer)
+    const found = await findSteps($, answer, lastRequest)
 
     isStepsReady = true
 
@@ -1153,6 +1163,7 @@ export const register: Register = (on, options) => {
     // A prompt that did not enter (a hook beneath dropped it) changes nothing: the voice, the conversation and the
     // steps still in the making are all still current.
     if (result.drop === undefined) {
+      lastRequest = e.text
       generation += 1
       await stopVoice($)
       await endConversation($)
