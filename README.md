@@ -92,7 +92,7 @@ Invoke-WebRequest -Uri "$base/it_IT-serena-high.onnx" -OutFile "$voice\voices\it
 Invoke-WebRequest -Uri "$base/it_IT-serena-high.onnx.json" -OutFile "$voice\voices\it_IT-serena-high.onnx.json"
 ```
 
-Then press `v` in the band (or type `/voice`, or `/voice` in Italian) to switch the voice on. If the folder is somewhere
+Then pick the voice in the band's Voice dropdown (or type `/voice`, or `/voce` in Italian) to switch it on. If the folder is somewhere
 else, set the option `voiceHome`. If the voice cannot start, the mod shows the reason and the voice stays off;
 everything else keeps working.
 
@@ -102,7 +102,7 @@ everything else keeps working.
 | --- | --- | --- |
 | `1`, `2`, `3` | Terminal, with the prompt box empty | Adds that step to the prompt |
 | Click a step | Terminal and desktop app | Adds that step to the prompt |
-| `v` or **Voice** | The band | Switches the voice on or off |
+| **Voice** dropdown | The band | Picks Off or a voice file; the choice is kept for the next session |
 | `s` or **Stop** | The band, while the voice is on and ready | Stops the voice at once |
 | `d` or **Talk it over** | The band | Opens the side assistant |
 | `/voice` | The prompt | Switches the voice on or off |

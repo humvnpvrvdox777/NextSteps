@@ -41,7 +41,7 @@ too: LJSpeech for English, Serena for Italian.
   more rows. The engine refuses a Button whose only child is a `Text`, unless it also has a label, so the step is
   the label. Whether the host wraps a long label on the terminal and on the desktop is not yet checked live.
 - The steps are written in the language of your last message. The mascot's lines and the labels are English by default; the `language` option (`en` or `it`) switches them.
-- The band also holds three controls: **Voice** (`v`, says "Voice: off", "starting…", "on" or "unavailable"), **Stop** (`s`, only while the voice is on and ready) and **Talk it over** (`d`). Hotkeys
+- The band also holds three controls: **Voice** (a dropdown: Off, or one of the voice files in the voices folder; its label says "starting…" or "unavailable" when the daemon starts or fails), **Stop** (`s`, only while the voice is on and ready) and **Talk it over** (`d`). Hotkeys
   work where the band holds the keyboard (the terminal). The slash command `/voce` switches the voice too.
 
 ## The voice
