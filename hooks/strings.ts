@@ -80,7 +80,7 @@ const EN: Strings = {
     prompt: 'In the prompt: {count} of {total}. Press Enter in the prompt to send them.',
     clipboard: 'On the clipboard: {count} of {total}. Paste them into the prompt with Ctrl+V, then press Enter.',
   },
-  button: { talk: 'Talk it over', stop: 'Stop', support: 'SUPPORT THE CREATOR' },
+  button: { talk: 'Talk it over', stop: 'Stop', support: 'SUPPORT CREATOR' },
   pane: {
     title: 'Assistant',
     you: 'You',
@@ -148,7 +148,7 @@ const IT: Strings = {
     prompt: 'Nel prompt: {count} di {total}. Premi Invio nel prompt per mandarli.',
     clipboard: 'Negli appunti: {count} di {total}. Incollali nel prompt con Ctrl+V, poi premi Invio.',
   },
-  button: { talk: 'Discutiamone', stop: 'Stop', support: "SOSTIENI L'AUTORE" },
+  button: { talk: 'Discutiamone', stop: 'Stop', support: 'SOSTIENIMI' },
   pane: {
     title: 'Assistente',
     you: 'Tu',
@@ -216,7 +216,7 @@ const RO: Strings = {
     prompt: 'În prompt: {count} din {total}. Apasă Enter în prompt ca să le trimiți.',
     clipboard: 'În clipboard: {count} din {total}. Lipește-le în prompt cu Ctrl+V, apoi apasă Enter.',
   },
-  button: { talk: 'Discutăm', stop: 'Stop', support: 'SUSȚINE AUTORUL' },
+  button: { talk: 'Discutăm', stop: 'Stop', support: 'SUSȚINE-MĂ' },
   pane: {
     title: 'Asistent',
     you: 'Tu',
