@@ -63,6 +63,8 @@ const QUIT_TIMEOUT_MS = 3000
 const RECHECK_MS = 150
 // The support link: PayPal. It stays still: nothing redraws the band on a timer for it.
 const SUPPORT_URL = 'https://paypal.me/bside777'
+// Claude's peach orange, the mascot's body colour: the support label.
+const SUPPORT_PEACH = '#D97757'
 
 let generation = 0
 let current: Phase = 'idle'
@@ -1007,15 +1009,17 @@ const suggest = async ($: EngineInterface, answer: string, mine: number) => {
   }
 }
 
-// The support link, at the bottom right of the band: a small dark teal chip with no padding. The engine's Link takes no
-// colour, so the label keeps the theme's link colour.
+// The support line, at the bottom right of the band: the label in Claude's peach on a small dark teal strip, and a
+// clickable arrow beside it that opens the page. The label is plain text, so it can take the colour; the arrow is the
+// link, and the engine's Link takes no colour, so the arrow keeps the theme's link colour.
 const supportRow = (t: Basic, texts: Strings) => {
-  const { Box, Link } = t
+  const { Box, Link, Text } = t
 
   return (
     <Box flexDirection="row" justifyContent="flex-end">
-      <Box backgroundColor={FRAME_COLOR}>
-        <Link key="support-link" href={SUPPORT_URL} label={texts.button.support} />
+      <Box flexDirection="row" gap={1} backgroundColor={FRAME_COLOR}>
+        <Text color={SUPPORT_PEACH}>{texts.button.support}</Text>
+        <Link key="support-link" href={SUPPORT_URL} label="↗" />
       </Box>
     </Box>
   )

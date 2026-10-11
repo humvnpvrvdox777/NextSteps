@@ -120,6 +120,7 @@ describe('register', () => {
     const hrefs = (await band.findAll({ type: 'Link' })).map(link => link.props.href)
 
     expect(hrefs).toContain('https://paypal.me/bside777')
+    expect((await band.find({ type: 'Text', text: 'SUPPORT CREATOR' }))?.props.color).toBe('#D97757')
   })
 
   test('a session that draws no band does not pay for suggestions', async ($, on) => {
