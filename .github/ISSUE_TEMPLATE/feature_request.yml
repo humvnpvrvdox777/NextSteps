@@ -1,0 +1,32 @@
+name: Feature request
+description: An idea for next-steps
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Pull requests are accepted only after discussion here. Describe the problem first; the solution can come after.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: What do you do today, and what gets in the way?
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution (optional)
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered (optional)
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues.
+          required: true
+        - label: I understand that a pull request for this is accepted only after we agree on it here.
+          required: true

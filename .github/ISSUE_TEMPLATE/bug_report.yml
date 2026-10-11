@@ -1,0 +1,89 @@
+name: Bug report
+description: Something in next-steps does not work as described
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. Remove secrets, API keys and personal paths from anything you paste below.
+  - type: input
+    id: version
+    attributes:
+      label: next-steps version
+      description: Shown in the plugin list, for example 0.4.0.
+      placeholder: "0.4.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Where do you use Claude Code?
+      options:
+        - Desktop app
+        - Terminal
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Windows 11, macOS 15, Ubuntu 24.04"
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Language setting
+      options:
+        - en
+        - it
+    validations:
+      required: true
+  - type: dropdown
+    id: voice
+    attributes:
+      label: Voice
+      description: Off, or on with the voice file you chose in the voice menu.
+      options:
+        - Off
+        - On
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Ask Claude a question
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log lines (optional)
+      description: The lines that mention next-steps from `claude --debug`. Redact secrets and personal paths.
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues.
+          required: true
+        - label: I removed secrets, API keys and personal paths from this report.
+          required: true
