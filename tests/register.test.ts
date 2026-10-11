@@ -109,7 +109,8 @@ describe('register', () => {
     expect(await stepsOf(band)).toHaveLength(3)
   })
 
-  test('the support link opens PayPal, and lights up gold for three seconds every 3 min 33 s', async ($, on) => {
+  // It simulates 3 min 33 s of clock, with the band drawn all along: longer than the default five seconds.
+  test('the support link opens PayPal, and a gold band sweeps across its label for three seconds every 3 min 33 s', { timeoutMs: 30000 }, async ($, on) => {
     const w = world(on)
 
     await $.session.start(SESSION)
@@ -117,20 +118,20 @@ describe('register', () => {
     await w.advance(SUGGEST_DELAY_MS)
 
     const band = await mountBand($, 'terminal')
+    const paypalLinks = async () =>
+      (await band.findAll({ type: 'Link' })).filter(link => link.props.href === 'https://paypal.me/bside777')
+    const goldBands = async () =>
+      (await band.findAll({ type: 'Box' })).filter(box => box.props.backgroundColor === '#FFC83D')
 
-    // A Link keeps no key on the drawn tree: it is found by its address.
-    const supportLink = async () =>
-      (await band.findAll({ type: 'Link' })).find(link => link.props.href === 'https://paypal.me/bside777')
-    const supportBox = async () => (await band.findAll({ type: 'Box' })).find(box => box.key === 'support')
+    expect(await paypalLinks()).not.toHaveLength(0)
+    expect(await goldBands()).toHaveLength(0)
 
-    expect((await supportLink())?.props.href).toBe('https://paypal.me/bside777')
-    expect((await supportBox())?.props.backgroundColor).toBeUndefined()
-
-    await w.advance(213000)
-    expect((await supportBox())?.props.backgroundColor).toBe('#D4A017')
+    // The sweep starts at 213 s; its first step, a fifth of a second later, lights the first letters.
+    await w.advance(213200)
+    expect(await goldBands()).not.toHaveLength(0)
 
     await w.advance(3000)
-    expect((await supportBox())?.props.backgroundColor).toBeUndefined()
+    expect(await goldBands()).toHaveLength(0)
   })
 
   test('a session that draws no band does not pay for suggestions', async ($, on) => {
@@ -506,7 +507,7 @@ describe('register', () => {
 
   // The test above samples the draws only after the writes were made, and the kit coalesces writes: it could never
   // fail. This one looks at the cause instead: which atoms the desktop band reads while it is drawn.
-  test('the desktop band reads only the phase, the steps, the placed steps, the way, the voice, the daemon and the support glow: never the clock, the chat or the draft', async ($, on) => {
+  test('the desktop band reads only the phase, the steps, the placed steps, the way, the voice, the daemon and the support sweep: never the clock, the chat or the draft', async ($, on) => {
     const w = world(on)
     const reads: string[] = []
     let isCounting = false
@@ -530,8 +531,8 @@ describe('register', () => {
     await band.drawn()
     isCounting = false
 
-    // The glow changes twice every 3 min 33 s: a redraw that rare is fine, the tick was the problem.
-    expect([...new Set(reads)].sort()).toEqual(['daemon', 'glow', 'phase', 'placed', 'steps', 'via', 'voice'])
+    // The sweep redraws the band while it runs, for three seconds every 3 min 33 s: the tick was the problem, not this.
+    expect([...new Set(reads)].sort()).toEqual(['daemon', 'phase', 'placed', 'shimmer', 'steps', 'via', 'voice'])
   })
 
   test('a session with a terminal and a desktop animates the terminal and leaves the desktop band alone', async ($, on) => {
@@ -780,8 +781,7 @@ describe('register', () => {
 
     for (const surface of ['terminal', 'desktop'] as const) {
       const band = await mountBand($, surface)
-      // The support link has a frame of its own: the band's frame is the one that is not the support's.
-      const frames = (await band.findAll({ type: 'Box' })).filter(box => box.props.borderStyle !== undefined && box.key !== 'support')
+      const frames = (await band.findAll({ type: 'Box' })).filter(box => box.props.borderStyle !== undefined)
 
       expect(frames.map(box => [box.props.borderStyle, box.props.borderColor])).toEqual([['round', FRAME_COLOR]])
       await band.unmount()

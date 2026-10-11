@@ -21,7 +21,7 @@ declare module 'claude-code' {
       busy: boolean
       chat: readonly ChatLine[]
       draft: string
-      glow: boolean
+      shimmer: number
     }
   }
 }

@@ -48,8 +48,8 @@ const daemon = atom({ plugin: 'next-steps', key: 'daemon' } as const, 'off')
 const busy = atom({ plugin: 'next-steps', key: 'busy' } as const, false)
 const chat = atom({ plugin: 'next-steps', key: 'chat' } as const, [])
 const draft = atom({ plugin: 'next-steps', key: 'draft' } as const, '')
-// The support link glows gold for a moment; the timer that lights it lives with the session.
-const glow = atom({ plugin: 'next-steps', key: 'glow' } as const, false)
+// The sweep's position across the support label: -1 when no sweep runs, else a count of characters.
+const shimmer = atom({ plugin: 'next-steps', key: 'shimmer' } as const, -1)
 
 // A Select is not on every surface (not on mobile): the column draws the voice dropdown only where it is.
 type Basic = Pick<Elements['terminal'], 'Box' | 'Button' | 'Link' | 'Text'> & Partial<Pick<Elements['terminal'], 'Select'>>
@@ -63,11 +63,15 @@ const POLL_MS = 300
 const REPLY_TIMEOUT_MS = 300000
 const QUIT_TIMEOUT_MS = 3000
 const RECHECK_MS = 150
-// The support link: PayPal, and a gold glow of three seconds every 3 min 33 s while a session is open.
+// The support button: PayPal, and a gold sweep across its label for three seconds every 3 min 33 s while a session is
+// open. The sweep moves a highlight of SHIMMER_WINDOW characters, SHIMMER_CHARS further each SHIMMER_STEP_MS.
 const SUPPORT_URL = 'https://paypal.me/bside777'
 const SUPPORT_EVERY_MS = 213000
 const SUPPORT_GLOW_MS = 3000
-const SUPPORT_GOLD = '#D4A017'
+const SHIMMER_STEP_MS = 200
+const SHIMMER_CHARS = 6
+const SHIMMER_WINDOW = 8
+const SUPPORT_GOLD = '#FFC83D'
 
 let generation = 0
 let current: Phase = 'idle'
@@ -75,6 +79,7 @@ let ticks = 0
 let timer: Timer | null = null
 let dismissal: Timer | null = null
 let supportTimer: Timer | null = null
+let sweepTimer: Timer | null = null
 let queue: Promise<void> = Promise.resolve()
 let engine: Voice | null = null
 let homeOption = ''
@@ -1013,23 +1018,51 @@ const suggest = async ($: EngineInterface, answer: string, mine: number) => {
   }
 }
 
-// The support link, at the bottom right of the band. Its frame and background turn gold while it glows.
-const supportRow = (t: Basic, glowing: boolean, texts: Strings) => {
+// The support link, at the bottom right of the band: a small dark teal chip. During a sweep a gold band moves across the
+// label: the label is three links side by side, and the middle one sits on the gold. The engine's Link takes no colour,
+// so the text keeps the theme's link colour.
+const supportRow = (t: Basic, shimmer: number, texts: Strings) => {
   const { Box, Link } = t
+  const label = texts.button.support
+  const at = shimmer < 0 ? 0 : shimmer % (label.length + SHIMMER_WINDOW)
+  const start = shimmer < 0 ? label.length : Math.max(0, at - SHIMMER_WINDOW)
+  const end = shimmer < 0 ? label.length : Math.min(label.length, at)
+  const before = label.slice(0, start)
+  const lit = label.slice(start, end)
+  const after = label.slice(end)
 
   return (
     <Box flexDirection="row" justifyContent="flex-end">
-      <Box
-        key="support"
-        borderStyle="round"
-        borderColor={glowing ? SUPPORT_GOLD : FRAME_COLOR}
-        backgroundColor={glowing ? SUPPORT_GOLD : undefined}
-        paddingX={1}
-      >
-        <Link key="support-link" href={SUPPORT_URL} label={texts.button.support} />
+      <Box flexDirection="row" backgroundColor={FRAME_COLOR} paddingX={1}>
+        {before !== '' && <Link key="support-before" href={SUPPORT_URL} label={before} />}
+        {lit !== '' && (
+          <Box backgroundColor={SUPPORT_GOLD}>
+            <Link key="support-lit" href={SUPPORT_URL} label={lit} />
+          </Box>
+        )}
+        {after !== '' && <Link key="support-after" href={SUPPORT_URL} label={after} />}
       </Box>
     </Box>
   )
+}
+
+// The sweep: a gold highlight runs across the label until the glow time is over, one step after the other. The position
+// keeps counting; the render reads it modulo the label's width, so the sweep wraps on its own.
+const sweepFrom = ($: EngineInterface, steps: number): void => {
+  if (steps * SHIMMER_STEP_MS >= SUPPORT_GLOW_MS) {
+    sweepTimer = null
+    void update($, shimmer, () => -1).catch(() => {})
+
+    return
+  }
+
+  void update($, shimmer, () => steps * SHIMMER_CHARS).catch(() => {})
+  sweepTimer = $.clock.after(SHIMMER_STEP_MS, () => sweepFrom($, steps + 1))
+}
+
+const startSweep = ($: EngineInterface): void => {
+  sweepTimer?.cancel()
+  sweepFrom($, 0)
 }
 
 const column = (
@@ -1126,16 +1159,11 @@ export const register: Register = (on, options) => {
 
     await update($, voice, () => wanted)
     await update($, daemon, () => 'off')
-    await update($, glow, () => false)
+    await update($, shimmer, () => -1)
 
-    // The support link lights up for a moment every few minutes, while the session is open.
+    // The support button sweeps its gold highlight for a moment every few minutes, while the session is open.
     supportTimer?.cancel()
-    supportTimer = $.clock.every(SUPPORT_EVERY_MS, () => {
-      void update($, glow, () => true).catch(() => {})
-      $.clock.after(SUPPORT_GLOW_MS, () => {
-        void update($, glow, () => false).catch(() => {})
-      })
-    })
+    supportTimer = $.clock.every(SUPPORT_EVERY_MS, () => startSweep($))
 
     // A session that draws no band has nobody to read to; if one appears later, the first answer wakes the voice.
     if (wanted && (await hasBand($))) {
@@ -1183,6 +1211,8 @@ export const register: Register = (on, options) => {
     generation += 1
     supportTimer?.cancel()
     supportTimer = null
+    sweepTimer?.cancel()
+    sweepTimer = null
     await stopVoice($)
     await endConversation($)
     await setPhase($, 'idle')
@@ -1227,7 +1257,7 @@ export const register: Register = (on, options) => {
     const picked = voiceOn ? voiceFile() : VOICE_OFF
     const state = await read($, daemon)
     const placedSteps = await read($, placed)
-    const glowing = await read($, glow)
+    const sweep = await read($, shimmer)
     // The band is one slot for every mod: what the others draw (the check-handoff-clean-B7 row)
     // stays on top, the mascot goes under it, never over it.
     const below = await next(e)
@@ -1250,7 +1280,7 @@ export const register: Register = (on, options) => {
               />
               {column($, $.ui.resolve(e), now, frame, found, how, placedSteps, voiceOn, state, voiceChoices(), picked, strings)}
             </Box>
-            {supportRow($.ui.resolve(e), glowing, strings)}
+            {supportRow($.ui.resolve(e), sweep, strings)}
           </Box>
         </Box>
       )
@@ -1276,7 +1306,7 @@ export const register: Register = (on, options) => {
             />
             {column($, $.ui.resolve(e), now, undefined, found, how, placedSteps, voiceOn, state, e.surface === 'mobile' ? null : voiceChoices(), picked, strings)}
           </Box>
-          {supportRow($.ui.resolve(e), glowing, strings)}
+          {supportRow($.ui.resolve(e), sweep, strings)}
         </Box>
       </Box>
     )
