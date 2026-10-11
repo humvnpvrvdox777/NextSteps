@@ -379,14 +379,17 @@ describe('voice flow', () => {
     expect(w.draws()).toBe(drawn)
   })
 
-  test('the voice is never asked to speak an answer that is too short to suggest anything', async ($, on) => {
+  test('the voice reads a short answer too, then asks for the next step', async ($, on) => {
     const w = world(on, { voice: true })
 
     await withVoice($, w)
-    await $.turn.complete({ ...TURN, answer: 'Too short.' })
+    await $.turn.complete({ ...TURN, answer: 'Done.' })
     await w.advance(SUGGEST_DELAY_MS)
+    w.daemon.speaking = false
+    await w.advance(1000)
 
-    expect(w.daemon.spoken).toHaveLength(0)
+    expect(w.daemon.spoken[0]).toBe('Done.')
+    expect(w.daemon.spoken.slice(1).join(' ')).toContain(SAID_STEPS[0])
   })
 
   test('a daemon that dies after it was ready is shown as unavailable, with a toast, and nothing is read', async ($, on) => {

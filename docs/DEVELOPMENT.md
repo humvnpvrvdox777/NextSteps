@@ -21,8 +21,8 @@ too: LJSpeech for English, Serena for Italian.
 
 - Shown on the terminal and desktop surfaces, the only ones that draw the band above the prompt. A session
   that draws neither (`-p`, SDK, vscode, mobile) never pays for the side question.
-- Appears when the main conversation finishes an answer of at least 80 characters (trimmed). Not for
-  subagent turns, interrupted or failed turns, or shorter answers.
+- Appears after every answer of the main conversation, however short. Not for subagent turns, interrupted or
+  failed turns.
 - The side question is asked 250 ms after the answer, so that a prompt typed ahead (queued behind the
   running turn) starts its turn first and supersedes the suggestion before the model is called.
 - Hidden while a turn runs, while a survey holds the band, and as soon as a turn starts, a new prompt is

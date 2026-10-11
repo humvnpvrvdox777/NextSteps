@@ -3,7 +3,6 @@ import { describe, expect, test } from 'claude-code/testing'
 import {
   CLIPBOARD_ARGV,
   MAX_ANSWER_CHARS,
-  MIN_ANSWER_CHARS,
   STEP_CRITERIA,
   VOICE_START_TIMEOUT_MS,
   buildPrompt,
@@ -16,7 +15,7 @@ import {
 } from '../hooks/steps'
 import { isWhole } from './unicode'
 
-const LONG = 'x'.repeat(MIN_ANSWER_CHARS)
+const ANSWER = 'Done.'
 
 describe('steps', () => {
   test('the voice gets at least a minute to start: its first load took 19 s on a busy machine', () => {
@@ -32,23 +31,18 @@ describe('steps', () => {
     expect(voiceLabel(true, 'failed')).toBe('Voice: unavailable')
   })
 
-  test('shouldSuggest accepts a main-loop answer of enough characters', () => {
-    expect(shouldSuggest({ reason: 'answer', answer: LONG })).toBe(true)
+  test('shouldSuggest accepts a main-loop answer, however short', () => {
+    expect(shouldSuggest({ reason: 'answer', answer: ANSWER })).toBe(true)
+    expect(shouldSuggest({ reason: 'answer', answer: '  Ok.  ' })).toBe(true)
   })
 
   test('shouldSuggest rejects a subagent turn', () => {
-    expect(shouldSuggest({ reason: 'answer', agentId: 'a1', answer: LONG })).toBe(false)
+    expect(shouldSuggest({ reason: 'answer', agentId: 'a1', answer: ANSWER })).toBe(false)
   })
 
   test('shouldSuggest rejects an interrupted or failed turn', () => {
-    expect(shouldSuggest({ reason: 'aborted', answer: LONG })).toBe(false)
-    expect(shouldSuggest({ reason: 'error', answer: LONG })).toBe(false)
-  })
-
-  test('shouldSuggest counts the trimmed answer', () => {
-    const short = 'x'.repeat(MIN_ANSWER_CHARS - 1)
-
-    expect(shouldSuggest({ reason: 'answer', answer: `  ${short}  ` })).toBe(false)
+    expect(shouldSuggest({ reason: 'aborted', answer: ANSWER })).toBe(false)
+    expect(shouldSuggest({ reason: 'error', answer: ANSWER })).toBe(false)
   })
 
   test('parseSteps reads exactly three lines inside the tags', () => {

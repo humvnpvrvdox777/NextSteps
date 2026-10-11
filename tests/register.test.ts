@@ -94,19 +94,19 @@ describe('register', () => {
     expect(await stepsOf(band)).toHaveLength(3)
   })
 
-  test('a short answer, a subagent turn and an interrupted turn suggest nothing', async ($, on) => {
+  test('a short answer still gets suggestions; a subagent turn and an interrupted turn get none', async ($, on) => {
     const w = world(on)
 
     await $.session.start(SESSION)
-    await $.turn.complete({ ...TURN, answer: 'Too short.' })
+    await $.turn.complete({ ...TURN, answer: 'Done.' })
     await $.turn.complete({ ...TURN, agentId: 'agent-1' })
     await $.turn.complete({ ...TURN, reason: 'aborted', isAborted: true })
     await w.advance(SUGGEST_DELAY_MS)
 
     const band = await mountBand($, 'terminal')
 
-    expect(w.seen.prompts).toHaveLength(0)
-    expect(await isAway(band)).toBe(true)
+    expect(w.seen.prompts).toHaveLength(1)
+    expect(await stepsOf(band)).toHaveLength(3)
   })
 
   test('a session that draws no band does not pay for suggestions', async ($, on) => {

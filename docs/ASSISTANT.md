@@ -67,9 +67,9 @@ the hand-off.
 
 ## Behavior
 
-1. With the voice on, when a qualifying answer completes (main loop, at least 80 characters, a session that
-   draws a band) the mascot reads the answer aloud. The three ways forward are prepared in parallel; when both
-   reading and preparation are done, the mascot asks "Come vuoi proseguire?" aloud, reads the three options
+1. With the voice on, when an answer completes (main loop, a session that draws a band) the mascot reads the answer
+   aloud. The three ways forward are prepared in parallel; when both reading and preparation are done, the mascot
+   asks "How do you want to continue?" aloud, reads the three options
    and shows the buttons.
 2. With the voice off nothing is spoken and the band behaves as in `README.md`.
 3. Reading stops at once when a turn starts, a prompt is submitted, the conversation is cleared, **Stop** is

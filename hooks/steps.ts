@@ -4,7 +4,6 @@ import { STRINGS } from './strings'
 import type { Strings } from './strings'
 
 export const STEP_COUNT = 3
-export const MIN_ANSWER_CHARS = 80
 export const MAX_ANSWER_CHARS = 6000
 export const SUGGEST_DELAY_MS = 250
 export const THINKING_TIMEOUT_MS = 30000
@@ -69,10 +68,7 @@ const unquote = (line: string): string => {
   return line
 }
 
-export const shouldSuggest = (turn: TurnEnd): boolean =>
-  turn.agentId === undefined &&
-  turn.reason === 'answer' &&
-  turn.answer.trim().length >= MIN_ANSWER_CHARS
+export const shouldSuggest = (turn: TurnEnd): boolean => turn.agentId === undefined && turn.reason === 'answer'
 
 export const buildPrompt = (answer: string): string =>
   [
