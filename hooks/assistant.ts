@@ -1,6 +1,7 @@
 import type { ChatLine } from '../types'
-import { REPLY_FAILED } from './steps'
 import { headOf, tailOf } from './text'
+import { STRINGS } from './strings'
+import type { Strings } from './strings'
 
 export type { ChatLine }
 
@@ -27,7 +28,7 @@ export const DIGEST_ROW_MAX = 1500
 export const ANSWER_TAIL = 6000
 export const HISTORY_MAX = 30
 export const REPLY_TOKENS_MAX = 64000
-export const OPENING = 'Dimmi cosa ne pensi, o cosa non ti torna: ne parliamo e decidiamo come proseguire.'
+export const OPENING = STRINGS.en.opening
 
 const EFFORTS: readonly Settings['effort'][] = ['low', 'medium', 'high', 'xhigh', 'max']
 
@@ -45,24 +46,28 @@ export const settingsFrom = (options: Readonly<Record<string, unknown>>): Settin
 }
 
 // What to tell the user when the model gave no reply; null when there is nothing to say (they cancelled it).
-export const failureLine = (failure: Failure, isCancelled: boolean): string | null => {
+export const failureLine = (
+  failure: Failure,
+  isCancelled: boolean,
+  texts: Strings['replyFailed'] = STRINGS.en.replyFailed,
+): string | null => {
   if (failure.reason === 'aborted') {
-    return isCancelled ? null : REPLY_FAILED.slow
+    return isCancelled ? null : texts.slow
   }
 
   if (failure.reason === 'empty-reply') {
-    return REPLY_FAILED.empty
+    return texts.empty
   }
 
   if (failure.error === 'rate_limit' || failure.status === 429) {
-    return REPLY_FAILED.limit
+    return texts.limit
   }
 
   if (failure.status === null || failure.status >= 500 || failure.error === 'overloaded') {
-    return REPLY_FAILED.network
+    return texts.network
   }
 
-  return REPLY_FAILED.other
+  return texts.other
 }
 
 export const systemPrompt = (): string =>

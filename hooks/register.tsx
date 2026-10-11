@@ -2,14 +2,15 @@ import { atom, read, update } from 'claude-code'
 import type { Elements, EngineInterface, Register, Timer } from 'claude-code'
 
 import type { ChatLine, Daemon, Phase, Via } from '../types'
-import { OPENING, digestOf, failureLine, parseReply, renderPrompt, settingsFrom, systemPrompt, trimHistory } from './assistant'
+import { digestOf, failureLine, parseReply, renderPrompt, settingsFrom, systemPrompt, trimHistory } from './assistant'
 import { CHOSEN_TICKS, FRAME_COLOR, FRAME_MS, lineFor, poseFor, toCells, toSvg } from './mascot'
 import { speakable } from './speakable'
+import { STRINGS, languageFrom } from './strings'
+import type { Strings } from './strings'
 import {
   CLIPBOARD_ARGV,
   SUGGEST_DELAY_MS,
   THINKING_TIMEOUT_MS,
-  TOAST,
   VOICE_START_TIMEOUT_MS,
   buildPrompt,
   fillFor,
@@ -41,8 +42,6 @@ type Basic = Pick<Elements['terminal'], 'Box' | 'Button' | 'Text'>
 
 const PANE_ID = 'assistant'
 const VOICE_KEY = 'voice'
-const ASK_LINE = 'Come vuoi proseguire?'
-const ORDINALS = ['Uno', 'Due', 'Tre'] as const
 const POLL_MS = 300
 const REPLY_TIMEOUT_MS = 300000
 const QUIT_TIMEOUT_MS = 3000
@@ -58,6 +57,8 @@ let engine: Voice | null = null
 let homeOption = ''
 let voiceHome = ''
 let settings = settingsFrom({})
+// The texts of the language the plugin option picks; set by register, and read by every hook.
+let strings: Strings = STRINGS.en
 let lastAnswer = ''
 let isSilenced = false
 let isStepsReady = false
@@ -188,7 +189,7 @@ const portsFor = ($: EngineInterface): VoicePorts => ({
 // The daemon ended on its own after it was ready: the band must say so, and nothing may try to read through it.
 const loseVoice = async ($: EngineInterface, why: string) => {
   $.ui.log(`next-steps: the voice ended on its own (${why})`, { to: 'debug' })
-  $.ui.toast(TOAST.voiceLost)
+  $.ui.toast(strings.toast.voiceLost)
   await update($, daemon, () => 'failed')
 }
 
@@ -198,7 +199,7 @@ const getVoice = ($: EngineInterface): Voice => {
       portsFor($),
       {
         python: `${voiceHome}\\venv\\Scripts\\python.exe`,
-        voice: `${voiceHome}\\voices\\it_IT-serena-high.onnx`,
+        voice: `${voiceHome}\\voices\\${strings.voiceModel}`,
         cwd: $.plugin.root,
         startTimeoutMs: VOICE_START_TIMEOUT_MS,
         quitTimeoutMs: QUIT_TIMEOUT_MS,
@@ -226,7 +227,7 @@ const speakFailed = ($: EngineInterface, error: unknown) => {
 
   if (isVoiceReady() && !isSkipToasted) {
     isSkipToasted = true
-    $.ui.toast(TOAST.voiceSkipped)
+    $.ui.toast(strings.toast.voiceSkipped)
   }
 }
 
@@ -252,7 +253,7 @@ const startVoice = async ($: EngineInterface) => {
     const why = error instanceof Error ? error.message : String(error)
 
     $.ui.log(`next-steps: the voice did not start (${why})`, { to: 'debug' })
-    $.ui.toast(`${TOAST.voiceFailed}: ${why}`)
+    $.ui.toast(`${strings.toast.voiceFailed}: ${why}`)
     await update($, daemon, () => 'off')
     await update($, voice, () => false)
     await $.store.set(VOICE_KEY, false)
@@ -322,7 +323,7 @@ const speakText = async ($: EngineInterface, text: string) => {
   }
 
   try {
-    await getVoice($).speak(speakable(text))
+    await getVoice($).speak(speakable(text, strings.spoken))
   } catch (error) {
     speakFailed($, error)
   }
@@ -332,7 +333,7 @@ const readAloud = async ($: EngineInterface, answer: string, mine: number) => {
   const speaker = getVoice($)
 
   try {
-    await speaker.speak(speakable(answer))
+    await speaker.speak(speakable(answer, strings.spoken))
 
     while (mine === generation && !isSilenced && (await speaker.isSpeaking())) {
       await pause($, POLL_MS)
@@ -351,7 +352,7 @@ const askAloud = async ($: EngineInterface, found: readonly string[], mine: numb
     return
   }
 
-  const lines = [ASK_LINE, ...found.map((step, index) => `${ORDINALS[index] ?? index + 1}. ${step}`)]
+  const lines = [strings.ask, ...found.map((step, index) => `${strings.ordinals[index] ?? index + 1}. ${step}`)]
 
   await speakText($, lines.join('\n\n'))
 }
@@ -406,13 +407,13 @@ const choose = async ($: EngineInterface, step: string) => {
   const handoff = handoffFor(filled.refusal, await ownsComposer($))
 
   if (handoff === 'dialog') {
-    $.ui.toast(TOAST.dialog)
+    $.ui.toast(strings.toast.dialog)
 
     return
   }
 
   if (handoff === 'refused') {
-    $.ui.toast(TOAST.refused)
+    $.ui.toast(strings.toast.refused)
 
     return
   }
@@ -423,12 +424,12 @@ const choose = async ($: EngineInterface, step: string) => {
   if (await copyToClipboard($, all.join('\n'))) {
     await update($, via, () => 'clipboard')
     await update($, placed, () => all)
-    $.ui.toast(TOAST.copied)
+    $.ui.toast(strings.toast.copied)
 
     return
   }
 
-  $.ui.toast(TOAST.clipboardFailed)
+  $.ui.toast(strings.toast.clipboardFailed)
 }
 
 const openChat = async ($: EngineInterface) => {
@@ -438,7 +439,7 @@ const openChat = async ($: EngineInterface) => {
   const isFirst = (await read($, chat)).length === 0
 
   if (isFirst) {
-    const opening: ChatLine = { who: 'assistant', text: OPENING }
+    const opening: ChatLine = { who: 'assistant', text: strings.opening }
 
     await update($, chat, () => [opening])
   }
@@ -457,12 +458,12 @@ const openChat = async ($: EngineInterface) => {
   }
 
   isPaneOpen = true
-  await $.ui.open({ id: PANE_ID, title: 'Assistente', focus: true, closeOnEscape: true })
+  await $.ui.open({ id: PANE_ID, title: strings.pane.title, focus: true, closeOnEscape: true })
   await setPhase($, current === 'replying' ? 'replying' : 'chatting', found)
 
   if (isFirst) {
     isSilenced = false
-    await speakText($, OPENING)
+    await speakText($, strings.opening)
   }
 }
 
@@ -489,7 +490,7 @@ const ask = async ($: EngineInterface, text: string) => {
 
   if (isAsking) {
     // A host may clear a field once its line is submitted: a line that is not taken must say why, not vanish.
-    $.ui.toast(TOAST.stillAnswering)
+    $.ui.toast(strings.toast.stillAnswering)
 
     return
   }
@@ -546,13 +547,17 @@ const ask = async ($: EngineInterface, text: string) => {
       line = { who: 'assistant', text: reply.say ?? result.text.trim() }
       proposal = reply.handoff
     } else {
-      const failure = failureLine(result, isCancelled)
+      const failure = failureLine(result, isCancelled, strings.replyFailed)
 
       line = failure === null ? null : { who: 'assistant', text: failure, isError: true }
     }
   } catch (error) {
     $.ui.log(`next-steps: ${String(error)}`, { to: 'debug' })
-    line = { who: 'assistant', text: failureLine({ reason: 'api-error', status: null, error: 'unknown' }, false)!, isError: true }
+    line = {
+      who: 'assistant',
+      text: failureLine({ reason: 'api-error', status: null, error: 'unknown' }, false, strings.replyFailed)!,
+      isError: true,
+    }
   }
 
   if (mine !== asks) {
@@ -613,13 +618,13 @@ const copyDraft = async ($: EngineInterface) => {
   }
 
   if (await copyToClipboard($, text)) {
-    $.ui.toast(TOAST.copied)
+    $.ui.toast(strings.toast.copied)
     await finish($, 'clipboard')
 
     return
   }
 
-  $.ui.toast(TOAST.clipboardFailed)
+  $.ui.toast(strings.toast.clipboardFailed)
 }
 
 // Enter in the proposal field changes nothing in the text, but a host may blank a field after it: a new field that
@@ -648,7 +653,7 @@ const sendDraft = async ($: EngineInterface) => {
     result = await $.prompt.submit({ text, asUser: true })
   } catch (error) {
     $.ui.log(`next-steps: ${String(error)}`, { to: 'debug' })
-    $.ui.toast(TOAST.sendFailed)
+    $.ui.toast(strings.toast.sendFailed)
 
     return
   }
@@ -656,12 +661,12 @@ const sendDraft = async ($: EngineInterface) => {
   // A hook beneath the plugin (a settings hook, another plugin) may refuse the prompt: nothing was sent.
   if (result.drop !== undefined) {
     $.ui.log(`next-steps: the prompt did not enter (${result.drop})`, { to: 'debug' })
-    $.ui.toast(TOAST.notAccepted)
+    $.ui.toast(strings.toast.notAccepted)
 
     return
   }
 
-  $.ui.toast(TOAST.sent)
+  $.ui.toast(strings.toast.sent)
   generation += 1
   await endConversation($)
   await setPhase($, 'idle')
@@ -770,13 +775,14 @@ const column = (
   placedSteps: readonly string[],
   voiceOn: boolean,
   state: Daemon,
+  texts: Strings,
 ) => {
   const { Box, Button, Text } = t
   const shows = now === 'asking' || now === 'chatting' || now === 'replying'
 
   return (
     <Box flexDirection="column">
-      <Text bold>{lineFor(now, frame, how)}</Text>
+      <Text bold>{lineFor(now, frame, how, texts)}</Text>
       {shows &&
         found.map((step, index) => {
           const isPlaced = placedSteps.includes(step)
@@ -794,20 +800,20 @@ const column = (
           )
         })}
       {shows && placedSteps.length > 0 && (
-        <Text dimColor>{placedLine(placedSteps.length, found.length, how)}</Text>
+        <Text dimColor>{placedLine(placedSteps.length, found.length, how, texts.placed)}</Text>
       )}
       {now !== 'chosen' && (
         <Box flexDirection="row" gap={2}>
           <Button
             key="voice"
             hotkey="v"
-            label={voiceLabel(voiceOn, state)}
+            label={voiceLabel(voiceOn, state, texts.voice)}
             onPress={() => toggleVoice($).catch(() => {})}
           />
           {voiceOn && state === 'ready' && (
-            <Button key="stop" hotkey="s" label="Stop" onPress={() => stopVoice($).catch(() => {})} />
+            <Button key="stop" hotkey="s" label={texts.button.stop} onPress={() => stopVoice($).catch(() => {})} />
           )}
-          <Button key="discuss" hotkey="d" label="Discutiamone" onPress={() => openChat($).catch(() => {})} />
+          <Button key="discuss" hotkey="d" label={texts.button.talk} onPress={() => openChat($).catch(() => {})} />
         </Box>
       )}
     </Box>
@@ -816,10 +822,11 @@ const column = (
 
 export const register: Register = (on, options) => {
   settings = settingsFrom(options)
+  strings = STRINGS[languageFrom(options.language)]
   homeOption = typeof options.voiceHome === 'string' ? options.voiceHome.trim() : ''
 
   on('session.start', async ($, e, next) => {
-    await $.command.register({ name: 'voce', description: 'Accende o spegne la voce che legge le risposte' })
+    await $.command.register({ name: strings.command.name, description: strings.command.description })
 
     voiceHome = homeOption !== '' ? homeOption : `${(await $.env.get('USERPROFILE')) ?? ''}\\.claude\\voice`
     await endConversation($)
@@ -838,10 +845,10 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
-  on('command.run', { command: 'voce' }, async $ => {
+  on('command.run', { command: strings.command.name }, async $ => {
     const wanted = await toggleVoice($)
 
-    return { text: wanted ? 'Voce attivata: parte tra qualche secondo.' : 'Voce spenta.' }
+    return { text: wanted ? strings.command.switchedOn : strings.command.switchedOff }
   })
 
   on('turn.start', async ($, e, next) => {
@@ -932,7 +939,7 @@ export const register: Register = (on, options) => {
                 rows={sprite.rows}
                 cells={sprite.cells}
               />
-              {column($, $.ui.resolve(e), now, frame, found, how, placedSteps, voiceOn, state)}
+              {column($, $.ui.resolve(e), now, frame, found, how, placedSteps, voiceOn, state, strings)}
             </Box>
           </Box>
         </Box>
@@ -957,7 +964,7 @@ export const register: Register = (on, options) => {
               width={sprite.width}
               height={sprite.height}
             />
-            {column($, $.ui.resolve(e), now, undefined, found, how, placedSteps, voiceOn, state)}
+            {column($, $.ui.resolve(e), now, undefined, found, how, placedSteps, voiceOn, state, strings)}
           </Box>
         </Box>
       </Box>
@@ -978,23 +985,23 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column">
         {lines.map((line, index) => (
           <Text key={`line-${index}`} bold={line.who === 'assistant' && line.isError !== true} dimColor={line.isError === true}>
-            {`${line.who === 'user' ? 'Tu' : 'Assistente'}: ${line.text}`}
+            {`${line.who === 'user' ? strings.pane.you : strings.pane.assistant}: ${line.text}`}
           </Text>
         ))}
         <Input
           key={`say-${fieldId}`}
-          label="Scrivi:"
-          placeholder="poi premi Invio"
+          label={strings.pane.write}
+          placeholder={strings.pane.placeholder}
           autoFocus
           onSubmit={value => {
             void ask($, value).catch(() => {})
           }}
         />
-        {isBusy && <Text dimColor>L'assistente sta pensando…</Text>}
-        {isBusy && <Button key="cancel" label="Annulla" onPress={() => cancelAsk($).catch(() => {})} />}
+        {isBusy && <Text dimColor>{strings.pane.thinking}</Text>}
+        {isBusy && <Button key="cancel" label={strings.pane.cancel} onPress={() => cancelAsk($).catch(() => {})} />}
         {proposal !== '' && (
           <Box flexDirection="column">
-            <Text bold>Richiesta per il progetto (puoi modificarla):</Text>
+            <Text bold>{strings.pane.proposal}</Text>
             <Input
               key={`draft-${draftId}`}
               value={proposal}
@@ -1006,17 +1013,17 @@ export const register: Register = (on, options) => {
               }}
             />
             <Box flexDirection="row" gap={2}>
-              <Button key="copy" label="Copia" onPress={() => copyDraft($).catch(() => {})} />
+              <Button key="copy" label={strings.pane.copy} onPress={() => copyDraft($).catch(() => {})} />
               <Button
                 key="send"
                 variant="primary"
-                label="Manda al progetto"
+                label={strings.pane.send}
                 onPress={() => sendDraft($).catch(() => {})}
               />
             </Box>
           </Box>
         )}
-        <Button key="close" label="Chiudi" onPress={() => $.ui.close({ id: PANE_ID }).catch(() => {})} />
+        <Button key="close" label={strings.pane.close} onPress={() => $.ui.close({ id: PANE_ID }).catch(() => {})} />
       </Box>
     )
   })

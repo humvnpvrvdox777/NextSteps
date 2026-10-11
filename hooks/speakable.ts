@@ -1,4 +1,6 @@
 import { headOf, splitsPair } from './text'
+import { STRINGS } from './strings'
+import type { Strings } from './strings'
 
 export const FIRST_CHUNK_MAX = 60
 export const CHUNK_MAX = 120
@@ -6,15 +8,10 @@ export const CHUNK_MAX = 120
 // below is not linear on odd inputs (a hundred thousand brackets took twenty seconds), so a huge answer is cut first.
 export const MAX_SPOKEN_CHARS = 12000
 
-// What the voice says in place of what it cannot read out. Edit these to change how it sounds.
-export const SPOKEN = {
-  code: 'Blocco di codice.',
-  table: 'Tabella.',
-  link: 'un link',
-  path: 'un percorso',
-  id: 'un identificatore',
-  rest: 'Il resto della risposta è nel testo.',
-} as const
+// The English phrases, the default. The phrases of the other language live in strings.ts, and the caller passes them.
+export const SPOKEN = STRINGS.en.spoken
+
+type Spoken = Strings['spoken']
 
 const PATH_MIN_LENGTH = 24
 const MIN_HEAD_SHARE = 3
@@ -34,32 +31,32 @@ const CLOSERS = /["'”’)\]»]/
 const isWord = (char: string | undefined) => char !== undefined && /[A-Za-zÀ-ÿ]/.test(char)
 
 // Paths first: an identifier inside a path must not split it into two tokens.
-const describeLongTokens = (text: string): string =>
+const describeLongTokens = (text: string, spoken: Spoken): string =>
   text
     .split(/(\s+)/)
     .map(part => {
       const core = part.replace(/^[("'[]+|[)"'\],.;:!?]+$/g, '')
 
-      return core.length >= PATH_MIN_LENGTH && /[\\/]/.test(core) ? part.replace(core, SPOKEN.path) : part
+      return core.length >= PATH_MIN_LENGTH && /[\\/]/.test(core) ? part.replace(core, spoken.path) : part
     })
     .join('')
-    .replace(UUID, SPOKEN.id)
-    .replace(HEX_ID, SPOKEN.id)
+    .replace(UUID, spoken.id)
+    .replace(HEX_ID, spoken.id)
 
 // Markdown to plain text: marks go, the words stay, what cannot be read out is described.
-const clean = (text: string): string =>
+const clean = (text: string, spoken: Spoken): string =>
   describeLongTokens(
     text
       .replace(/<!--[\s\S]*?-->/g, ' ')
-      .replace(/<(https?:\/\/[^>\s]+)>/g, ` ${SPOKEN.link} `)
+      .replace(/<(https?:\/\/[^>\s]+)>/g, ` ${spoken.link} `)
       .replace(/<br\s*\/?>/gi, ' ')
       .replace(/<\/?[a-zA-Z][^>]*>/g, ' ')
       .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
       .replace(/\[\^[^\]]+\]/g, '')
-      .replace(/\[([^\]]*)\]\([^)]*\)/g, (_, label: string) => (label.trim() === '' ? SPOKEN.link : label))
+      .replace(/\[([^\]]*)\]\([^)]*\)/g, (_, label: string) => (label.trim() === '' ? spoken.link : label))
       .replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1')
-      .replace(/\bhttps?:\/\/[^\s)>\]]+/g, SPOKEN.link)
-      .replace(/\bwww\.[^\s)>\]]+/g, SPOKEN.link)
+      .replace(/\bhttps?:\/\/[^\s)>\]]+/g, spoken.link)
+      .replace(/\bwww\.[^\s)>\]]+/g, spoken.link)
       .replace(/`([^`]*)`/g, '$1')
       .replace(/\*\*([^*]+)\*\*/g, '$1')
       .replace(/__([^_]+)__/g, '$1')
@@ -67,6 +64,7 @@ const clean = (text: string): string =>
       .replace(/(^|[\s(])_([^_\s][^_]*)_(?=[\s).,;:!?]|$)/g, '$1$2')
       .replace(/~~([^~]+)~~/g, '$1')
       .replace(/\\([\\`*_{}[\]()#+\-.!|>~])/g, '$1'),
+    spoken,
   )
     .replace(/\s+/g, ' ')
     .trim()
@@ -76,7 +74,7 @@ const terminate = (text: string): string => (text === '' || /[.!?…:;]$/.test(t
 type Open = { kind: 'paragraph' | 'item'; lines: string[] }
 
 // The text to speak, one unit per paragraph, heading, list item or block that is only described.
-const unitsOf = (markdown: string): string[] => {
+const unitsOf = (markdown: string, spoken: Spoken): string[] => {
   const lines = markdown.replace(/\r\n?/g, '\n').split('\n')
   const units: string[] = []
   let open: Open | null = null
@@ -85,7 +83,7 @@ const unitsOf = (markdown: string): string[] => {
 
   const close = () => {
     if (open !== null) {
-      units.push(terminate(clean(open.lines.join(' '))))
+      units.push(terminate(clean(open.lines.join(' '), spoken)))
       previous = open.kind === 'item' ? 'list' : 'text'
       open = null
     }
@@ -108,7 +106,7 @@ const unitsOf = (markdown: string): string[] => {
       }
 
       index += 1
-      units.push(SPOKEN.code)
+      units.push(spoken.code)
       previous = 'text'
       continue
     }
@@ -129,7 +127,7 @@ const unitsOf = (markdown: string): string[] => {
         index += 1
       }
 
-      units.push(SPOKEN.code)
+      units.push(spoken.code)
       previous = 'text'
       continue
     }
@@ -141,7 +139,7 @@ const unitsOf = (markdown: string): string[] => {
         index += 1
       }
 
-      units.push(SPOKEN.table)
+      units.push(spoken.table)
       previous = 'text'
       continue
     }
@@ -156,7 +154,7 @@ const unitsOf = (markdown: string): string[] => {
 
     if (heading !== null) {
       close()
-      units.push(terminate(clean(heading[1]!)))
+      units.push(terminate(clean(heading[1]!, spoken)))
       previous = 'text'
       index += 1
       continue
@@ -299,9 +297,9 @@ const pack = (all: readonly string[]): string[] => {
 
 // The answer as chunks to speak: markdown read as speech, the first chunk short so that sound starts early. An answer
 // longer than MAX_SPOKEN_CHARS is read up to there, and the voice says that the rest is in the text.
-export const speakable = (markdown: string): string[] => {
+export const speakable = (markdown: string, spoken: Spoken = STRINGS.en.spoken): string[] => {
   const isLong = markdown.length > MAX_SPOKEN_CHARS
-  const chunks = pack(unitsOf(isLong ? headOf(markdown, MAX_SPOKEN_CHARS) : markdown).flatMap(sentences))
+  const chunks = pack(unitsOf(isLong ? headOf(markdown, MAX_SPOKEN_CHARS) : markdown, spoken).flatMap(sentences))
 
-  return isLong ? [...chunks, SPOKEN.rest] : chunks
+  return isLong ? [...chunks, spoken.rest] : chunks
 }

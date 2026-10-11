@@ -30,7 +30,7 @@ const stepButtons = async (band: Band) =>
   (await band.findAll({ type: 'Button' })).filter(button => /^[123]$/.test(String(button.props.hotkey)))
 
 const SAID_ANSWER = speakable(LONG_ANSWER)
-const SAID_STEPS = ['Come vuoi proseguire?', ...STEPS.map((step, index) => `${['Uno', 'Due', 'Tre'][index]}. ${step}`)]
+const SAID_STEPS = ['How do you want to continue?', ...STEPS.map((step, index) => `${['One', 'Two', 'Three'][index]}. ${step}`)]
 
 describe('voice flow', () => {
   test('with the voice off nothing is started, nothing is said and the band is as it was', async ($, on) => {
@@ -44,7 +44,7 @@ describe('voice flow', () => {
     expect(w.daemon.spawns).toHaveLength(0)
     expect(w.daemon.requests).toHaveLength(0)
     expect(await stepButtons(band)).toHaveLength(3)
-    expect(await labelOf(band, 'voice')).toBe('Voce: spenta')
+    expect(await labelOf(band, 'voice')).toBe('Voice: off')
   })
 
   test('a stored choice starts the daemon at session start: no shell, the port left to the system, the secret in its environment', async ($, on) => {
@@ -56,10 +56,18 @@ describe('voice flow', () => {
 
     const spawn = w.daemon.spawns[0]!
 
-    expect(spawn.argv).toEqual([`${HOME}\\venv\\Scripts\\python.exe`, '-m', 'voiced', '--port', '0', '--voice', `${HOME}\\voices\\it_IT-serena-high.onnx`])
+    expect(spawn.argv).toEqual([`${HOME}\\venv\\Scripts\\python.exe`, '-m', 'voiced', '--port', '0', '--voice', `${HOME}\\voices\\en_US-ljspeech-high.onnx`])
     expect(spawn.env?.VOICED_TOKEN).toMatch(TOKEN)
     expect(spawn.argv.join(' ')).not.toContain(spawn.env!.VOICED_TOKEN!)
     expect(spawn.cwd).toBeTruthy()
+  })
+
+  test('the Italian option starts the Italian voice, the Serena model', { options: { language: 'it' } }, async ($, on) => {
+    const w = world(on, { voice: true })
+
+    await withVoice($, w)
+
+    expect(w.daemon.spawns[0]?.argv.at(-1)).toBe(`${HOME}\\voices\\it_IT-serena-high.onnx`)
   })
 
   test('a long answer is read aloud while the steps are prepared, and the band says it is reading', async ($, on) => {
@@ -72,9 +80,9 @@ describe('voice flow', () => {
 
     expect(w.daemon.spoken).toEqual(SAID_ANSWER)
     expect(w.seen.prompts).toHaveLength(1)
-    expect(await band.find({ type: 'Text', text: 'Ti leggo la risposta' })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: 'Reading the answer to you' })).toBeDefined()
     expect(await stepButtons(band)).toHaveLength(0)
-    expect(await labelOf(band, 'voice')).toBe('Voce: attiva')
+    expect(await labelOf(band, 'voice')).toBe('Voice: on')
   })
 
   test('when the reading ends the mascot asks aloud, reads the three options and shows the buttons', async ($, on) => {
@@ -88,7 +96,7 @@ describe('voice flow', () => {
     w.daemon.speaking = false
     await w.advance(1000)
 
-    expect(await band.find({ type: 'Text', text: 'Come vuoi proseguire?' })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: 'How do you want to continue?' })).toBeDefined()
     expect((await stepButtons(band)).map(button => button.props.label)).toEqual([...STEPS])
     expect(w.daemon.spoken.slice(0, SAID_ANSWER.length)).toEqual(SAID_ANSWER)
 
@@ -108,7 +116,7 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await band.find({ type: 'Text', text: 'Ti leggo la risposta' })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: 'Reading the answer to you' })).toBeDefined()
     expect(await stepButtons(band)).toHaveLength(0)
   })
 
@@ -123,7 +131,7 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await band.find({ type: 'Text', text: /Sto pensando/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /Thinking about how to continue/ })).toBeDefined()
     expect(await stepButtons(band)).toHaveLength(0)
 
     release()
@@ -165,7 +173,7 @@ describe('voice flow', () => {
 
       const band = await mountBand($, 'terminal')
 
-      expect(await band.find({ type: 'Text', text: 'Ti leggo la risposta' })).toBeDefined()
+      expect(await band.find({ type: 'Text', text: 'Reading the answer to you' })).toBeDefined()
 
       await interrupt($)
 
@@ -193,7 +201,7 @@ describe('voice flow', () => {
 
     expect(w.daemon.quits).toBe(1)
   })
-  test('the Voce button turns the voice on and starts the daemon, and again off and quits it, remembering each choice', async ($, on) => {
+  test('the Voice button turns the voice on and starts the daemon, and again off and quits it, remembering each choice', async ($, on) => {
     const w = world(on)
 
     await $.session.start(SESSION)
@@ -201,24 +209,24 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await labelOf(band, 'voice')).toBe('Voce: spenta')
+    expect(await labelOf(band, 'voice')).toBe('Voice: off')
 
     await band.press({ key: 'voice' })
     await w.advance(0)
 
     expect(w.daemon.spawns).toHaveLength(1)
-    expect(await labelOf(band, 'voice')).toBe('Voce: attiva')
+    expect(await labelOf(band, 'voice')).toBe('Voice: on')
     expect(w.store.get('voice')).toBe(true)
 
     await band.press({ key: 'voice' })
     await w.advance(0)
 
     expect(w.daemon.quits).toBe(1)
-    expect(await labelOf(band, 'voice')).toBe('Voce: spenta')
+    expect(await labelOf(band, 'voice')).toBe('Voice: off')
     expect(w.store.get('voice')).toBe(false)
   })
 
-  test('the Voce button says the daemon is starting until it is ready', async ($, on) => {
+  test('the Voice button says the daemon is starting until it is ready', async ($, on) => {
     const w = world(on)
 
     w.daemon.isSilent = true
@@ -230,7 +238,7 @@ describe('voice flow', () => {
     await band.press({ key: 'voice' })
     await w.advance(0)
 
-    expect(await labelOf(band, 'voice')).toBe('Voce: avvio…')
+    expect(await labelOf(band, 'voice')).toBe('Voice: starting…')
   })
 
   test('a daemon that cannot start turns the voice back off, and a toast says why without the secret', async ($, on) => {
@@ -247,7 +255,7 @@ describe('voice flow', () => {
 
     const token = w.daemon.spawns[0]!.env!.VOICED_TOKEN!
 
-    expect(await labelOf(band, 'voice')).toBe('Voce: spenta')
+    expect(await labelOf(band, 'voice')).toBe('Voice: off')
     expect(w.seen.toasts.some(toast => toast.includes(TOAST.voiceFailed) && toast.includes('cannot load the voice: no such file'))).toBe(true)
     expect(w.seen.toasts.join(' ')).not.toContain(token)
     expect(w.store.get('voice')).toBe(false)
@@ -269,11 +277,11 @@ describe('voice flow', () => {
     await band.press({ key: 'voice' })
     await w.advance(VOICE_START_TIMEOUT_MS - 1)
 
-    expect(await labelOf(band, 'voice')).toBe('Voce: avvio…')
+    expect(await labelOf(band, 'voice')).toBe('Voice: starting…')
 
     await w.advance(1)
 
-    expect(await labelOf(band, 'voice')).toBe('Voce: spenta')
+    expect(await labelOf(band, 'voice')).toBe('Voice: off')
     expect(w.seen.toasts.some(toast => toast.includes(`not ready in ${VOICE_START_TIMEOUT_MS / 1000} s`))).toBe(true)
   })
 
@@ -288,40 +296,40 @@ describe('voice flow', () => {
     const band = await mountBand($, 'terminal')
 
     // While the steps are made the mascot thinks: it does not say it reads when there is no voice to read with.
-    expect(await band.find({ type: 'Text', text: /^Sto pensando/ })).toBeDefined()
-    expect(await band.find({ type: 'Text', text: /Ti leggo/ })).toBeUndefined()
+    expect(await band.find({ type: 'Text', text: /^Thinking about how to continue/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /Reading the answer/ })).toBeUndefined()
 
     release()
     await w.advance(0)
 
     expect(w.daemon.spoken).toHaveLength(0)
     expect(await stepButtons(band)).toHaveLength(3)
-    expect(await labelOf(band, 'voice')).toBe('Voce: avvio…')
+    expect(await labelOf(band, 'voice')).toBe('Voice: starting…')
     // Nothing even tried to speak through a voice that was not ready.
     expect(w.seen.logs.filter(line => line.text.includes('could not speak'))).toEqual([])
     expect(w.seen.toasts).toEqual([])
   })
 
-  test('the slash command voce toggles the voice too, and says so', async ($, on) => {
+  test('the slash command voice toggles the voice too, and says so', async ($, on) => {
     const w = world(on)
 
     await $.session.start(SESSION)
 
-    expect(w.seen.commands).toEqual(['voce'])
+    expect(w.seen.commands).toEqual(['voice'])
 
-    const on1 = await $.command.run({ command: 'voce', ...COMMAND })
+    const on1 = await $.command.run({ command: 'voice', ...COMMAND })
 
     await w.advance(0)
 
-    expect(on1.text).toMatch(/attivata/i)
+    expect(on1.text).toMatch(/Voice on/i)
     expect(w.store.get('voice')).toBe(true)
     expect(w.daemon.spawns).toHaveLength(1)
 
-    const off = await $.command.run({ command: 'voce', ...COMMAND })
+    const off = await $.command.run({ command: 'voice', ...COMMAND })
 
     await w.advance(0)
 
-    expect(off.text).toMatch(/spenta/i)
+    expect(off.text).toMatch(/Voice off/i)
     expect(w.store.get('voice')).toBe(false)
   })
 
@@ -383,7 +391,7 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await labelOf(band, 'voice')).toBe('Voce: non disponibile')
+    expect(await labelOf(band, 'voice')).toBe('Voice: unavailable')
     expect(await band.find({ type: 'Button', key: 'stop' })).toBeUndefined()
     expect(w.seen.toasts).toEqual([TOAST.voiceLost])
     expect(w.daemon.spoken).toHaveLength(0)
@@ -400,7 +408,7 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await labelOf(band, 'voice')).toBe('Voce: attiva')
+    expect(await labelOf(band, 'voice')).toBe('Voice: on')
     expect(await band.find({ type: 'Button', key: 'stop' })).toBeDefined()
     expect(w.seen.toasts).toEqual([TOAST.voiceSkipped])
 
@@ -446,7 +454,7 @@ describe('voice flow', () => {
     await w.advance(0)
 
     expect(w.seen.toasts).toEqual([])
-    expect(await labelOf(band, 'voice')).toBe('Voce: spenta')
+    expect(await labelOf(band, 'voice')).toBe('Voice: off')
     expect(w.store.get('voice')).toBe(false)
   })
 
@@ -469,8 +477,8 @@ describe('voice flow', () => {
 
     await withVoice($, w)
 
-    const first = $.command.run({ command: 'voce', ...COMMAND })
-    const second = $.command.run({ command: 'voce', ...COMMAND })
+    const first = $.command.run({ command: 'voice', ...COMMAND })
+    const second = $.command.run({ command: 'voice', ...COMMAND })
     const [off, again] = await Promise.all([first, second])
 
     await w.advance(0)
@@ -478,12 +486,12 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(off.text).toMatch(/spenta/i)
-    expect(again.text).toMatch(/attivata/i)
+    expect(off.text).toMatch(/Voice off/i)
+    expect(again.text).toMatch(/Voice on/i)
     expect(w.store.get('voice')).toBe(true)
     expect(w.seen.toasts).toEqual([])
     expect(w.daemon.spawns).toHaveLength(2)
-    expect(await labelOf(band, 'voice')).toBe('Voce: attiva')
+    expect(await labelOf(band, 'voice')).toBe('Voice: on')
   })
 
   test('a daemon that dies in the same breath as its ready line is shown as unavailable, not as active', async ($, on) => {
@@ -496,7 +504,7 @@ describe('voice flow', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await labelOf(band, 'voice')).toBe('Voce: non disponibile')
+    expect(await labelOf(band, 'voice')).toBe('Voice: unavailable')
     expect(w.seen.toasts).toEqual([TOAST.voiceLost])
     expect(w.daemon.spoken).toHaveLength(0)
   })
@@ -527,7 +535,7 @@ describe('voice flow', () => {
 
     expect(w.daemon.quits).toBe(0)
     expect(w.daemon.spawns).toHaveLength(1)
-    expect(await labelOf(band, 'voice')).toBe('Voce: attiva')
+    expect(await labelOf(band, 'voice')).toBe('Voice: on')
     expect(w.daemon.spoken.length).toBeGreaterThan(0)
   })
 
@@ -586,7 +594,7 @@ describe('voice flow', () => {
     w.daemon.speaking = false
     await w.advance(1000)
 
-    expect(w.daemon.spoken.join(' ')).toContain('Come vuoi proseguire?')
+    expect(w.daemon.spoken.join(' ')).toContain('How do you want to continue?')
   })
 
   test('each start of the daemon has a random secret of its own', async ($, on) => {

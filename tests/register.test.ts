@@ -24,7 +24,7 @@ import {
 
 const CLEAR = { reason: 'clear', sessionId: 's1', resume: { id: 's1' } } as const
 
-// The three step buttons only: the band has controls of its own now (Voce, Stop, Discutiamone).
+// The three step buttons only: the band has controls of its own now (Voce, Stop, Talk it over).
 const stepsOf = async (band: Awaited<ReturnType<typeof mountBand>>) =>
   (await band.findAll({ type: 'Button' })).filter(button => /^[123]$/.test(String(button.props.hotkey)))
 
@@ -44,7 +44,7 @@ describe('register', () => {
 
     expect(buttons.map(button => button.props.label)).toEqual([...STEPS])
     expect(buttons.map(button => button.props.hotkey)).toEqual(['1', '2', '3'])
-    expect(await band.find({ type: 'Text', text: 'Come vuoi proseguire?' })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: 'How do you want to continue?' })).toBeDefined()
     expect(w.seen.prompts).toHaveLength(1)
     expect(w.seen.prompts[0]).toContain(LONG_ANSWER)
   })
@@ -85,7 +85,7 @@ describe('register', () => {
     const band = await mountBand($, 'terminal')
 
     expect(await band.find({ type: 'Raster' })).toBeDefined()
-    expect(await band.find({ type: 'Text', text: /Sto pensando/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /Thinking about how to continue/ })).toBeDefined()
     expect(await stepsOf(band)).toHaveLength(0)
 
     release()
@@ -406,7 +406,7 @@ describe('register', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await band.find({ type: 'Text', text: /Sto pensando/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /Thinking about how to continue/ })).toBeDefined()
 
     await w.advance(THINKING_TIMEOUT_MS)
 
@@ -556,11 +556,11 @@ describe('register', () => {
 
     const band = await mountBand($, 'terminal')
 
-    expect(await band.find({ type: 'Text', text: /^Sto pensando a come proseguire\.$/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^Thinking about how to continue\.$/ })).toBeDefined()
 
     await w.advance(FRAME_MS * 4)
 
-    expect(await band.find({ type: 'Text', text: /^Sto pensando a come proseguire\.\.$/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^Thinking about how to continue\.\.$/ })).toBeDefined()
 
     release()
     await w.advance(0)
@@ -648,11 +648,11 @@ describe('register', () => {
 
     const band = await mountBand($, 'desktop')
 
-    expect(await band.find({ type: 'Text', text: /^Sto pensando a come proseguire\.\.\.$/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^Thinking about how to continue\.\.\.$/ })).toBeDefined()
 
     await w.advance(FRAME_MS * 12)
 
-    expect(await band.find({ type: 'Text', text: /^Sto pensando a come proseguire\.\.\.$/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^Thinking about how to continue\.\.\.$/ })).toBeDefined()
 
     release()
     await w.advance(0)

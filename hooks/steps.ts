@@ -1,5 +1,7 @@
 import type { Daemon, Via } from '../types'
 import { tailOf } from './text'
+import { STRINGS } from './strings'
+import type { Strings } from './strings'
 
 export const STEP_COUNT = 3
 export const MIN_ANSWER_CHARS = 80
@@ -10,27 +12,10 @@ export const THINKING_TIMEOUT_MS = 30000
 // reboot can take longer, and giving up early turns the voice off for nothing.
 export const VOICE_START_TIMEOUT_MS = 90000
 
-export const TOAST = {
-  copied: 'Copiato negli appunti: incollalo nel prompt con Ctrl+V',
-  dialog: 'Chiudi la finestra di dialogo e riprova',
-  clipboardFailed: 'Non riesco a copiare negli appunti',
-  refused: 'Non riesco a scrivere nel prompt',
-  sent: 'Mandato al progetto',
-  sendFailed: 'Non riesco a mandarlo al progetto',
-  notAccepted: 'Il progetto non ha accettato la richiesta: è ancora qui, riprova o copiala',
-  stillAnswering: "L'assistente sta ancora rispondendo: aspetta o premi Annulla",
-  voiceFailed: 'La voce non parte',
-  voiceLost: 'La voce si è fermata: riaccendila dal pulsante Voce',
-  voiceSkipped: 'La voce non è riuscita a leggere questa risposta',
-} as const
+// The English texts, the default. The mod draws the texts of its language (strings.ts) through the same keys.
+export const TOAST = STRINGS.en.toast
 
-export const REPLY_FAILED = {
-  limit: 'Troppe richieste in questo momento: aspetta un attimo e riprova.',
-  network: 'Non riesco a raggiungere il modello adesso. Riprova tra poco.',
-  empty: 'Non ho ricevuto una risposta. Riprova.',
-  slow: 'La risposta sta impiegando troppo: riprova.',
-  other: 'Non riesco a rispondere adesso.',
-} as const
+export const REPLY_FAILED = STRINGS.en.replyFailed
 
 const CLIPBOARD_SCRIPT =
   '[Console]::InputEncoding = [System.Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())'
@@ -139,21 +124,23 @@ export const handoffFor = (
   return refusal === 'no_composer' || ownsComposer ? 'copy' : 'refused'
 }
 
-// What the band says once steps are in the prompt: the person sends it from the prompt, and by hand after a paste.
-export const placedLine = (count: number, total: number, via: Via): string =>
-  via === 'clipboard'
-    ? `Negli appunti: ${count} di ${total}. Incollali nel prompt con Ctrl+V, poi premi Invio.`
-    : `Nel prompt: ${count} di ${total}. Premi Invio nel prompt per mandarli.`
-
-export const voiceLabel = (isOn: boolean, state: Daemon): string => {
+export const voiceLabel = (isOn: boolean, state: Daemon, labels: Strings['voice'] = STRINGS.en.voice): string => {
   if (!isOn) {
-    return 'Voce: spenta'
+    return labels.off
   }
 
   if (state === 'ready') {
-    return 'Voce: attiva'
+    return labels.on
   }
 
-  return state === 'failed' ? 'Voce: non disponibile' : 'Voce: avvio…'
+  return state === 'failed' ? labels.unavailable : labels.starting
 }
+
+// What the band says once steps are in the prompt: the person sends it from the prompt, and by hand after a paste.
+export const placedLine = (
+  count: number,
+  total: number,
+  via: Via,
+  texts: Strings['placed'] = STRINGS.en.placed,
+): string => (via === 'clipboard' ? texts.clipboard(count, total) : texts.prompt(count, total))
 

@@ -23,13 +23,13 @@ describe('steps', () => {
     expect(VOICE_START_TIMEOUT_MS).toBeGreaterThanOrEqual(60000)
   })
 
-  test('the Voce button says what the voice is doing', () => {
-    expect(voiceLabel(false, 'off')).toBe('Voce: spenta')
-    expect(voiceLabel(false, 'ready')).toBe('Voce: spenta')
-    expect(voiceLabel(true, 'ready')).toBe('Voce: attiva')
-    expect(voiceLabel(true, 'starting')).toBe('Voce: avvio…')
-    expect(voiceLabel(true, 'off')).toBe('Voce: avvio…')
-    expect(voiceLabel(true, 'failed')).toBe('Voce: non disponibile')
+  test('the Voice button says what the voice is doing', () => {
+    expect(voiceLabel(false, 'off')).toBe('Voice: off')
+    expect(voiceLabel(false, 'ready')).toBe('Voice: off')
+    expect(voiceLabel(true, 'ready')).toBe('Voice: on')
+    expect(voiceLabel(true, 'starting')).toBe('Voice: starting…')
+    expect(voiceLabel(true, 'off')).toBe('Voice: starting…')
+    expect(voiceLabel(true, 'failed')).toBe('Voice: unavailable')
   })
 
   test('shouldSuggest accepts a main-loop answer of enough characters', () => {
@@ -130,8 +130,8 @@ describe('steps', () => {
   })
 
   test('placedLine says how many steps are in the prompt, and where the person still has to press Enter', () => {
-    expect(placedLine(2, 3, 'prompt')).toBe('Nel prompt: 2 di 3. Premi Invio nel prompt per mandarli.')
-    expect(placedLine(1, 3, 'clipboard')).toBe('Negli appunti: 1 di 3. Incollali nel prompt con Ctrl+V, poi premi Invio.')
+    expect(placedLine(2, 3, 'prompt')).toBe('In the prompt: 2 of 3. Press Enter in the prompt to send them.')
+    expect(placedLine(1, 3, 'clipboard')).toBe('On the clipboard: 1 of 3. Paste them into the prompt with Ctrl+V, then press Enter.')
   })
 
   test('handoffFor copies when the engine says there is no composer, or the app owns it', () => {

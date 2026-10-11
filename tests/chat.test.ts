@@ -84,12 +84,12 @@ const editDraft = async (pane: Pane, text: string, kind: 'change' | 'submit' = '
 const lineOf = (pane: Pane, text: string) => pane.find({ type: 'Text', text })
 
 describe('chat', () => {
-  test('Discutiamone opens the panel, the mascot listens, and the three ways forward stay clickable', async ($, on) => {
+  test('Talk it over opens the panel, the mascot listens, and the three ways forward stay clickable', async ($, on) => {
     const w = world(on)
     const { band } = await talking($, w)
 
     expect(w.seen.opened).toEqual(['assistant'])
-    expect(await band.find({ type: 'Text', text: 'Ne parliamo: scrivi nel pannello' })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: 'Talking it over: write in the panel' })).toBeDefined()
     expect(await stepButtons(band)).toHaveLength(3)
   })
 
@@ -97,7 +97,7 @@ describe('chat', () => {
     const w = world(on)
     const { band, pane } = await talking($, w)
 
-    expect(await lineOf(pane, `Assistente: ${OPENING}`)).toBeDefined()
+    expect(await lineOf(pane, `Assistant: ${OPENING}`)).toBeDefined()
     expect(await fieldOf(pane)).toBeDefined()
 
     await band.press({ key: 'discuss' })
@@ -121,8 +121,8 @@ describe('chat', () => {
     expect(call.system).toContain('<say>')
     expect(call.prompt).toContain(LONG_ANSWER)
     expect(call.prompt.trimEnd().endsWith('user: cosa ne pensi?')).toBe(true)
-    expect(await lineOf(pane, 'Tu: cosa ne pensi?')).toBeDefined()
-    expect(await lineOf(pane, 'Assistente: Ti consiglio di verificare prima.')).toBeDefined()
+    expect(await lineOf(pane, 'You: cosa ne pensi?')).toBeDefined()
+    expect(await lineOf(pane, 'Assistant: Ti consiglio di verificare prima.')).toBeDefined()
   })
 
   test('the message field comes back new and empty after each message and when the conversation ends', async ($, on) => {
@@ -197,7 +197,7 @@ describe('chat', () => {
 
     expect(second.indexOf('user: prima domanda')).toBeLessThan(second.indexOf('assistant: Prima risposta.'))
     expect(second.indexOf('assistant: Prima risposta.')).toBeLessThan(second.indexOf('user: seconda domanda'))
-    expect(await lineOf(pane, 'Assistente: Seconda risposta.')).toBeDefined()
+    expect(await lineOf(pane, 'Assistant: Seconda risposta.')).toBeDefined()
   })
 
   test('a reply without a say tag is shown as it came, and logged for debugging', async ($, on) => {
@@ -207,7 +207,7 @@ describe('chat', () => {
     w.queueComplete(completed('Just plain words'))
     await say(pane, 'ciao')
 
-    expect(await lineOf(pane, 'Assistente: Just plain words')).toBeDefined()
+    expect(await lineOf(pane, 'Assistant: Just plain words')).toBeDefined()
     expect(w.seen.logs).toContainEqual({ text: 'next-steps: the assistant answered without a <say> block', to: 'debug' })
   })
 
@@ -220,9 +220,9 @@ describe('chat', () => {
 
     await w.advance(0)
 
-    expect(await band.find({ type: 'Text', text: /^Ci penso/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^Thinking it over/ })).toBeDefined()
     expect(await pane.find({ type: 'Button', key: 'cancel' })).toBeDefined()
-    expect(await lineOf(pane, "L'assistente sta pensando…")).toBeDefined()
+    expect(await lineOf(pane, "The assistant is thinking…")).toBeDefined()
 
     await pane.press({ key: 'cancel' })
     await pending
@@ -230,13 +230,13 @@ describe('chat', () => {
     await w.advance(0)
 
     expect(await pane.find({ type: 'Button', key: 'cancel' })).toBeUndefined()
-    expect(await band.find({ type: 'Text', text: 'Ne parliamo: scrivi nel pannello' })).toBeDefined()
-    expect((await pane.findAll({ type: 'Text' })).map(text => text.text)).toEqual([`Assistente: ${OPENING}`, 'Tu: una domanda lunga'])
+    expect(await band.find({ type: 'Text', text: 'Talking it over: write in the panel' })).toBeDefined()
+    expect((await pane.findAll({ type: 'Text' })).map(text => text.text)).toEqual([`Assistant: ${OPENING}`, 'You: una domanda lunga'])
 
     w.queueComplete(said('Eccomi.'))
     await say(pane, 'di nuovo')
 
-    expect(await lineOf(pane, 'Assistente: Eccomi.')).toBeDefined()
+    expect(await lineOf(pane, 'Assistant: Eccomi.')).toBeDefined()
   })
 
   test('a call that failed is explained in one line, and that line is never sent back to the model', async ($, on) => {
@@ -246,13 +246,13 @@ describe('chat', () => {
     w.queueComplete({ isAnswered: false, reason: 'api-error', status: 529, error: 'overloaded', usage: USAGE }, said('Ora va.'))
     await say(pane, 'prima')
 
-    expect(await lineOf(pane, `Assistente: ${REPLY_FAILED.network}`)).toBeDefined()
+    expect(await lineOf(pane, `Assistant: ${REPLY_FAILED.network}`)).toBeDefined()
 
     await say(pane, 'riprovo')
 
     expect(w.seen.completes[1]!.prompt).toContain('user: prima')
     expect(w.seen.completes[1]!.prompt).not.toContain(REPLY_FAILED.network)
-    expect(await lineOf(pane, 'Assistente: Ora va.')).toBeDefined()
+    expect(await lineOf(pane, 'Assistant: Ora va.')).toBeDefined()
   })
 
   test('an empty line sends nothing, and a second line sent while one is answered is ignored', async ($, on) => {
@@ -277,7 +277,7 @@ describe('chat', () => {
     await first
 
     expect(w.seen.completes).toHaveLength(1)
-    expect(await pane.find({ type: 'Text', text: 'Tu: due' })).toBeUndefined()
+    expect(await pane.find({ type: 'Text', text: 'You: due' })).toBeUndefined()
   })
 
   test('a hand-off fills an editable field, and nothing is sent or copied until a button is pressed', async ($, on) => {
@@ -441,9 +441,9 @@ describe('chat', () => {
 
     expect(w.seen.opened).toEqual(['assistant', 'assistant'])
     expect((await pane.findAll({ type: 'Text' })).map(text => text.text)).toEqual([
-      `Assistente: ${OPENING}`,
-      'Tu: una domanda',
-      'Assistente: Una risposta.',
+      `Assistant: ${OPENING}`,
+      'You: una domanda',
+      'Assistant: Una risposta.',
     ])
   })
 
@@ -463,7 +463,7 @@ describe('chat', () => {
     await w.advance(0)
 
     expect(await stepButtons(band)).toHaveLength(3)
-    expect(await band.find({ type: 'Text', text: 'Ne parliamo: scrivi nel pannello' })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: 'Talking it over: write in the panel' })).toBeDefined()
   })
 
   test('with the voice on the opening and the replies are spoken, errors are not', async ($, on) => {
@@ -508,7 +508,7 @@ describe('chat', () => {
     const greetings = w.daemon.spoken.filter(chunk => OPENING.startsWith(chunk.slice(0, 20)))
 
     expect(greetings.length).toBeGreaterThan(0)
-    expect(w.daemon.spoken.join(' ').split('Dimmi cosa ne pensi').length - 1).toBe(1)
+    expect(w.daemon.spoken.join(' ').split('Tell me what you think').length - 1).toBe(1)
   })
 
   test('opening the conversation silences a reading that was going on', async ($, on) => {
@@ -727,7 +727,7 @@ describe('chat', () => {
     await w.advance(0)
     await band.press({ key: 'discuss' })
 
-    expect(await band.find({ type: 'Text', text: /^Ci penso/ })).toBeDefined()
+    expect(await band.find({ type: 'Text', text: /^Thinking it over/ })).toBeDefined()
 
     release()
     await pending

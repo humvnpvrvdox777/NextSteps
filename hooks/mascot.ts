@@ -1,4 +1,6 @@
 import type { Phase, Via } from '../types'
+import { STRINGS } from './strings'
+import type { Strings } from './strings'
 
 export type Eyes = 'open' | 'left' | 'right' | 'up' | 'closed' | 'happy'
 
@@ -353,29 +355,34 @@ export const toCells = (pose: Pose): RasterSprite => packCells(pixelsOf(pose))
 // Without a tick the lines that count dots hold still, as on the surfaces that play the sprite themselves.
 const dotsFor = (tick: number | undefined) => '.'.repeat(tick === undefined ? 3 : 1 + (Math.floor(tick / 4) % 3))
 
-export const lineFor = (phase: Phase, tick: number | undefined, via: Via = 'prompt'): string => {
+export const lineFor = (
+  phase: Phase,
+  tick: number | undefined,
+  via: Via = 'prompt',
+  strings: Strings = STRINGS.en,
+): string => {
   if (phase === 'thinking') {
-    return `Sto pensando a come proseguire${dotsFor(tick)}`
+    return `${strings.line.thinking}${dotsFor(tick)}`
   }
 
   if (phase === 'replying') {
-    return `Ci penso${dotsFor(tick)}`
+    return `${strings.line.replying}${dotsFor(tick)}`
   }
 
   if (phase === 'reading') {
-    return 'Ti leggo la risposta'
+    return strings.line.reading
   }
 
   if (phase === 'chatting') {
-    return 'Ne parliamo: scrivi nel pannello'
+    return strings.line.chatting
   }
 
   if (phase === 'asking') {
-    return 'Come vuoi proseguire?'
+    return strings.ask
   }
 
   if (phase === 'chosen') {
-    return via === 'clipboard' ? 'Copiato: incollalo con Ctrl+V' : 'Ok, te lo scrivo nel prompt'
+    return via === 'clipboard' ? strings.line.copied : strings.line.written
   }
 
   return ''

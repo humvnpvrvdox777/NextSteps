@@ -39,7 +39,7 @@ export const BAND: RenderPropsOf['AbovePrompt'] = {
 }
 
 export const PANE: RenderPropsOf['Pane'] = {
-  title: 'Assistente',
+  title: 'Assistant',
   isFocused: true,
   bodyColumns: 80,
   placement: 'inline',
@@ -109,7 +109,7 @@ export const isAway = async (band: Awaited<ReturnType<typeof mountBand>>) =>
   (await band.findAll({ type: 'Raster' })).length === 0 &&
   (await band.findAll({ type: 'Svg' })).length === 0 &&
   (await band.findAll({ type: 'Button' })).length === 0 &&
-  (await band.find({ type: 'Text', text: /Sto pensando|Come vuoi|Ok, te lo|Ctrl\+V|Ti leggo|Ne parliamo|Ci penso|Nel prompt|Negli appunti/ })) === undefined
+  (await band.find({ type: 'Text', text: /Thinking about how to continue|How do you want|Okay, I will|Ctrl\+V|Reading the answer|Talking it over|Thinking it over|In the prompt|On the clipboard/ })) === undefined
 
 const json = (body: unknown, status = 200): { value: HttpResponse } => ({
   value: { status, ok: status >= 200 && status < 300, headers: {}, text: JSON.stringify(body) },

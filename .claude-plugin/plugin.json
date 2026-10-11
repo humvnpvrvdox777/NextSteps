@@ -7,17 +7,33 @@
   "description": "After each answer, Claude's mascot reads it aloud (optional, local voice), asks how to continue and offers three next steps; a separate assistant helps you decide, and hands a request to the project only when you press a button.",
   "types": "./types/index.d.ts",
   "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "description": "The language of the labels, the mascot's lines and the voice phrases: en (English) or it (Italiano). The suggested steps follow the language you write in.",
+      "options": [
+        "en",
+        "it"
+      ],
+      "default": "en"
+    },
     "assistantModel": {
       "type": "string",
       "title": "Assistant model",
-      "description": "The model of the separate assistant you talk to (Discutiamone).",
+      "description": "The model of the separate assistant you talk to (Talk it over).",
       "default": "claude-sonnet-5-5"
     },
     "assistantEffort": {
       "type": "string",
       "title": "Assistant effort",
       "description": "How hard the assistant thinks before it answers: low, medium, high, xhigh or max.",
-      "options": ["low", "medium", "high", "xhigh", "max"],
+      "options": [
+        "low",
+        "medium",
+        "high",
+        "xhigh",
+        "max"
+      ],
       "default": "max"
     },
     "assistantMaxTokens": {

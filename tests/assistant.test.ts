@@ -153,13 +153,13 @@ describe('assistant', () => {
     const prompt = renderPrompt({
       digest: '',
       answer: 'done',
-      history: [line('user', 'is it safe?'), { who: 'assistant', text: 'Non riesco a rispondere adesso.', isError: true }, line('user', 'again?')],
+      history: [line('user', 'is it safe?'), { who: 'assistant', text: 'I cannot reply right now.', isError: true }, line('user', 'again?')],
       user: 'hello',
     })
 
     expect(prompt).toContain('is it safe?')
     expect(prompt).toContain('again?')
-    expect(prompt).not.toContain('Non riesco a rispondere')
+    expect(prompt).not.toContain('I cannot reply')
 
     const onlyNotices = renderPrompt({ digest: '', answer: 'done', history: [{ who: 'assistant', text: 'oops', isError: true }], user: 'hi' })
 
