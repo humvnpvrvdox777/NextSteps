@@ -109,8 +109,7 @@ describe('register', () => {
     expect(await stepsOf(band)).toHaveLength(3)
   })
 
-  // It simulates 3 min 33 s of clock, with the band drawn all along: longer than the default five seconds.
-  test('the support link opens PayPal, and a gold band sweeps across its label for three seconds every 3 min 33 s', { timeoutMs: 30000 }, async ($, on) => {
+  test('the support link points at PayPal', async ($, on) => {
     const w = world(on)
 
     await $.session.start(SESSION)
@@ -118,20 +117,9 @@ describe('register', () => {
     await w.advance(SUGGEST_DELAY_MS)
 
     const band = await mountBand($, 'terminal')
-    const paypalLinks = async () =>
-      (await band.findAll({ type: 'Link' })).filter(link => link.props.href === 'https://paypal.me/bside777')
-    const goldBands = async () =>
-      (await band.findAll({ type: 'Box' })).filter(box => box.props.backgroundColor === '#FFC83D')
+    const hrefs = (await band.findAll({ type: 'Link' })).map(link => link.props.href)
 
-    expect(await paypalLinks()).not.toHaveLength(0)
-    expect(await goldBands()).toHaveLength(0)
-
-    // The sweep starts at 213 s; its first step, a fifth of a second later, lights the first letters.
-    await w.advance(213200)
-    expect(await goldBands()).not.toHaveLength(0)
-
-    await w.advance(3000)
-    expect(await goldBands()).toHaveLength(0)
+    expect(hrefs).toContain('https://paypal.me/bside777')
   })
 
   test('a session that draws no band does not pay for suggestions', async ($, on) => {
@@ -507,7 +495,7 @@ describe('register', () => {
 
   // The test above samples the draws only after the writes were made, and the kit coalesces writes: it could never
   // fail. This one looks at the cause instead: which atoms the desktop band reads while it is drawn.
-  test('the desktop band reads only the phase, the steps, the placed steps, the way, the voice, the daemon and the support sweep: never the clock, the chat or the draft', async ($, on) => {
+  test('the desktop band reads only the phase, the steps, the placed steps, the way, the voice and the daemon: never the clock, the chat or the draft', async ($, on) => {
     const w = world(on)
     const reads: string[] = []
     let isCounting = false
@@ -531,8 +519,7 @@ describe('register', () => {
     await band.drawn()
     isCounting = false
 
-    // The sweep redraws the band while it runs, for three seconds every 3 min 33 s: the tick was the problem, not this.
-    expect([...new Set(reads)].sort()).toEqual(['daemon', 'phase', 'placed', 'shimmer', 'steps', 'via', 'voice'])
+    expect([...new Set(reads)].sort()).toEqual(['daemon', 'phase', 'placed', 'steps', 'via', 'voice'])
   })
 
   test('a session with a terminal and a desktop animates the terminal and leaves the desktop band alone', async ($, on) => {
