@@ -4,6 +4,9 @@ import { STRINGS, fill } from './strings'
 import type { Strings } from './strings'
 
 export const STEP_COUNT = 3
+// A step is one line of the band's buttons; a shorter step is easier to read there. Measured on Sonnet 5.5 and Haiku 5.5
+// with the 100-character rule that came before: Haiku went over 100 characters in 8 turns out of 10.
+export const MAX_STEP_CHARS = 80
 export const MAX_ANSWER_CHARS = 6000
 // The steps come from one completion over the answer and the person's last message, never over the whole conversation:
 // that call is cheap, and its cost does not grow with the length of the session.
@@ -97,7 +100,7 @@ export const buildPrompt = (answer: string, request = ''): string => {
     STEP_CRITERIA,
     '',
     'Rules:',
-    '- Write each step as a message the user could send as-is: short, imperative, concrete, at most 100 characters.',
+    `- Write each step as a message the user could send as-is: short, imperative, concrete, at most ${MAX_STEP_CHARS} characters.`,
     "- Write in the language of the user's last message.",
     '- Put the three steps inside <steps></steps> tags, one per line, with no numbering, bullets or quotes. Anything outside the tags is ignored.',
     '',

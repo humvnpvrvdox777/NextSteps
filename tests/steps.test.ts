@@ -4,6 +4,7 @@ import {
   CLIPBOARD_ARGV,
   MAX_ANSWER_CHARS,
   MAX_REQUEST_CHARS,
+  MAX_STEP_CHARS,
   STEP_CRITERIA,
   STEPS_MAX_TOKENS,
   STEPS_MODEL,
@@ -101,6 +102,11 @@ describe('steps', () => {
     expect(prompt).toContain(STEP_CRITERIA)
     expect(prompt).toContain('<answer>\nThe answer text\n</answer>')
     expect(prompt).toContain('<steps></steps>')
+  })
+
+  test('buildPrompt asks for steps of at most MAX_STEP_CHARS characters', () => {
+    expect(MAX_STEP_CHARS).toBe(80)
+    expect(buildPrompt('The answer text')).toContain(`at most ${MAX_STEP_CHARS} characters.`)
   })
 
   test('buildPrompt quotes what the person asked, ahead of the answer', () => {
