@@ -2,7 +2,7 @@
 
 **Your next move, one click away.** next-steps is a Claude Code mod. After each finished answer, Claude's mascot
 offers three next steps: the natural continuation, a verification, and an alternative. Pick one, several or all
-three, and they go into your prompt for you to edit and send. Nothing is sent until you press Enter.
+three: in the terminal they go into your prompt, in the desktop app onto the clipboard. You edit and send them yourself. Nothing is sent until you press Enter.
 
 It works in the Claude Code desktop app and in the terminal. Two optional extras: a local voice that reads each
 answer aloud, and a side assistant to think through your next request before you send it to the project.
@@ -45,7 +45,7 @@ Then run `/reload-plugins` or restart Claude Code. The mod is active from the ne
 ## Turning on the voice (optional)
 
 The voice is off by default. It uses the voice that matches the language in use. Create the Python environment
-once (Python 3.12):
+once, with Python 3.12 (`python --version` must print 3.12.x):
 
 ```powershell
 $voice = "$env:USERPROFILE\.claude\voice"
@@ -137,7 +137,7 @@ mod. Architecture notes are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md); the a
   [committa/serena-synthetic-it-27h](https://huggingface.co/datasets/committa/serena-synthetic-it-27h). Licensed
   CC-BY-4.0. Voice files from [rhasspy/piper-voices](https://huggingface.co/rhasspy/piper-voices).
 - Voice: LJSpeech, Piper `en_US-ljspeech-high`, trained on the LJSpeech 1.1 dataset, which is public domain.
-- Speech engine: [Piper](https://github.com/rhasspy/piper) (`piper-tts`, GPL-3.0). It is installed in your own
+- Speech engine: [Piper](https://github.com/OHF-Voice/piper1-gpl) (`piper-tts`, GPL-3.0-or-later). It is installed in your own
   virtual environment and is not redistributed in this repository.
 - The mascot is an original pixel-art drawing inspired by Claude Code's banner.
 

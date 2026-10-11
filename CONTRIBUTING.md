@@ -7,7 +7,7 @@ Thanks for wanting to help. next-steps is maintained by one person, so the rules
 - **Bugs:** open an issue with the bug report template. Include the version, the steps to reproduce and what you expected.
 - **Ideas:** open an issue with the feature request template. Describe the problem before the solution.
 - **Pull requests are accepted only after discussion.** Open an issue first and wait for the maintainer to agree to the change. A pull request that was not discussed may be closed, and the discussion moves to its issue.
-- **Security problems:** do not open a public issue. Write to the address in the Contact section of the [README](README.md).
+- **Security problems:** do not open a public issue. Write to the address in the Support section of the [README](README.md).
 
 ## Before you open a pull request
 

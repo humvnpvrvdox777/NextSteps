@@ -254,12 +254,12 @@ Flow:
 
 ## Install
 
-The mod itself lives in `~\.claude\skills\next-steps` (permanent since 2026-10-07, version 0.4.0): the engine loads a
-plugin found in a skills folder at the start of every session and reloads it when a file is saved, as
-`next-steps@skills-dir`. This folder is the source of truth: edit here, then run `claude plugin test`, `tsc -p` and
-`claude plugin validate` on it. Plugin options go under `pluginConfigs["next-steps@skills-dir"]` in the settings. The
-stored choice of the voice (`$.store`) belongs to the plugin's identity, so a choice made while the mod was loaded
-from a session's mods folder (`next-steps@inline`) is not seen here: switch the voice on once more.
+The mod itself lives in `~\.claude\skills\next-steps` (permanent since 2026-10-07): the engine loads a plugin found
+in a skills folder at the start of every session, as `next-steps@skills-dir`. A terminal session reloads it when a
+file is saved; the desktop app needs `/reload-plugins` or a restart. This folder is the source of truth: edit here,
+then run `claude plugin test`, `tsc -p` and `claude plugin validate` on it. Plugin options go under
+`pluginConfigs["next-steps@skills-dir"]` in the settings. The stored choice of the voice (`$.store`) belongs to the
+plugin's identity, so it is kept per plugin id.
 
 The voice lives in `~\.claude\voice\` (the option `voiceHome` changes it): `venv\` with `piper-tts` and its
 libraries, `voices\it_IT-serena-high.onnx` and its `.json` (Italian), `voices\en_US-ljspeech-high.onnx` and its `.json`
@@ -278,7 +278,7 @@ is the Serena file above (114 MB). Both are read by the same daemon: the mod pic
 - `claude plugin validate <folder>` passes and lists the hooks (`session.start`, `command.run` for `voce`,
   `turn.start`, `prompt.submit`, `session.end`, `turn.complete`, `ui.render` for `AbovePrompt` and `Pane`).
 - `tsc -p <folder>` reports no errors.
-- `claude plugin test <folder>` passes (268 tests): the pure modules, the full flow with a mocked clock, model,
+- `claude plugin test <folder>` passes (290 tests at version 0.4.1): the pure modules, the full flow with a mocked clock, model,
   store and a fake daemon (a child that prints `ready <port>` and answers the four routes), the band on
   `terminal` and `desktop`, the voice (start, toggle, failures, stop on every interruption), the reading flow,
   the conversation, the hand-off, the desktop band not being redrawn by the clock or by a reply, the SVG film
@@ -307,7 +307,7 @@ is the Serena file above (114 MB). Both are read by the same daemon: the mod pic
 - Live check with the user in the desktop app: the voice reads, Stop is immediate, a new prompt cuts the
   voice, Talk it over opens the panel, a reply arrives, the proposal appears, Copy and Send work, voice off
   leaves no `python` running.
-- Not yet looked at live (version 0.4.0): a long step wraps onto more rows on the terminal and on the desktop;
+- Not yet looked at live (version 0.4.1): a long step wraps onto more rows on the terminal and on the desktop;
   the frame and the mascot at 60%; picking all three, then sending from the prompt makes the band go away.
 
 ## Review
