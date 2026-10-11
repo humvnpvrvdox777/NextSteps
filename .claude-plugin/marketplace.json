@@ -10,7 +10,7 @@
     {
       "name": "next-steps",
       "source": "./",
-      "description": "A Claude Code mod: after each answer, a mascot offers three next steps you can combine into your prompt, with an optional local voice and a side assistant.",
+      "description": "Three next steps after each answer, above your prompt. An optional local voice reads them aloud, and a side assistant helps you decide the next request.",
       "version": "0.4.0"
     }
   ]

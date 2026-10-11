@@ -4,7 +4,7 @@
   "author": {
     "name": "humvnpvrvdox777"
   },
-  "description": "After each answer, Claude's mascot reads it aloud (optional, local voice), asks how to continue and offers three next steps; a separate assistant helps you decide, and hands a request to the project only when you press a button.",
+  "description": "Three next steps after each answer, above your prompt. An optional local voice reads them aloud, and a side assistant helps you decide the next request.",
   "types": "./types/index.d.ts",
   "userConfig": {
     "language": {
