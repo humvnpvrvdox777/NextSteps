@@ -42,6 +42,22 @@ Run these commands in Claude Code, from a terminal session:
 
 Then run `/reload-plugins` or restart Claude Code. The mod is active from the next answer on.
 
+### Turn on the function hooks
+
+next-steps runs on Claude Code's function hooks. Without them the mod stays silent: its hook modules are not loaded.
+Set this switch in your user settings, then restart Claude Code. On Windows the file is `%USERPROFILE%\.claude\settings.json`:
+
+```json
+{
+  "env": {
+    "CLAUDE_CODE_ENABLE_FUNCTION_HOOKS": "1"
+  }
+}
+```
+
+With the value `1`, Claude Code loads the hook modules even when its rollout has not reached your account. If the band
+never appears after the restart, this switch is the first thing to check.
+
 ## Turning on the voice (optional)
 
 The voice is off by default. It uses the voice that matches the language in use. Create the Python environment
