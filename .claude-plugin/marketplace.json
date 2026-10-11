@@ -11,7 +11,7 @@
       "name": "next-steps",
       "source": "./",
       "description": "Three next steps after each answer, above your prompt. An optional local voice reads them aloud, and a side assistant helps you decide the next request.",
-      "version": "0.4.1"
+      "version": "0.4.2"
     }
   ]
 }
