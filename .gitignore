@@ -1,0 +1,16 @@
+# The type files Claude Code writes into the mod when it loads it: generated, never committed.
+.claude-plugin/types/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / TypeScript tooling, if any is added later
+node_modules/
+
+# Local files
+*.log
+.env
+.DS_Store
+Thumbs.db
