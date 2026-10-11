@@ -279,7 +279,7 @@ is the Serena file above (114 MB). Both are read by the same daemon: the mod pic
 - `claude plugin validate <folder>` passes and lists the hooks (`session.start`, `command.run` for `voce`,
   `turn.start`, `prompt.submit`, `session.end`, `turn.complete`, `ui.render` for `AbovePrompt` and `Pane`).
 - `tsc -p <folder>` reports no errors.
-- `claude plugin test <folder>` passes (295 tests): the pure modules, the full flow with a mocked clock, model,
+- `claude plugin test <folder>` passes (296 tests): the pure modules, the full flow with a mocked clock, model,
   store and a fake daemon (a child that prints `ready <port>` and answers the four routes), the band on
   `terminal` and `desktop`, the voice (start, toggle, failures, stop on every interruption), the reading flow,
   the conversation, the hand-off, the desktop band not being redrawn by the clock or by a reply, the SVG film
