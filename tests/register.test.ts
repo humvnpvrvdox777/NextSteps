@@ -109,6 +109,30 @@ describe('register', () => {
     expect(await stepsOf(band)).toHaveLength(3)
   })
 
+  test('the support link opens PayPal, and lights up gold for three seconds every 3 min 33 s', async ($, on) => {
+    const w = world(on)
+
+    await $.session.start(SESSION)
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    const band = await mountBand($, 'terminal')
+
+    // A Link keeps no key on the drawn tree: it is found by its address.
+    const supportLink = async () =>
+      (await band.findAll({ type: 'Link' })).find(link => link.props.href === 'https://paypal.me/bside777')
+    const supportBox = async () => (await band.findAll({ type: 'Box' })).find(box => box.key === 'support')
+
+    expect((await supportLink())?.props.href).toBe('https://paypal.me/bside777')
+    expect((await supportBox())?.props.backgroundColor).toBeUndefined()
+
+    await w.advance(213000)
+    expect((await supportBox())?.props.backgroundColor).toBe('#D4A017')
+
+    await w.advance(3000)
+    expect((await supportBox())?.props.backgroundColor).toBeUndefined()
+  })
+
   test('a session that draws no band does not pay for suggestions', async ($, on) => {
     const w = world(on)
 
@@ -482,7 +506,7 @@ describe('register', () => {
 
   // The test above samples the draws only after the writes were made, and the kit coalesces writes: it could never
   // fail. This one looks at the cause instead: which atoms the desktop band reads while it is drawn.
-  test('the desktop band reads only the phase, the steps, the placed steps, the way, the voice and the daemon: never the clock, the chat or the draft', async ($, on) => {
+  test('the desktop band reads only the phase, the steps, the placed steps, the way, the voice, the daemon and the support glow: never the clock, the chat or the draft', async ($, on) => {
     const w = world(on)
     const reads: string[] = []
     let isCounting = false
@@ -506,7 +530,8 @@ describe('register', () => {
     await band.drawn()
     isCounting = false
 
-    expect([...new Set(reads)].sort()).toEqual(['daemon', 'phase', 'placed', 'steps', 'via', 'voice'])
+    // The glow changes twice every 3 min 33 s: a redraw that rare is fine, the tick was the problem.
+    expect([...new Set(reads)].sort()).toEqual(['daemon', 'glow', 'phase', 'placed', 'steps', 'via', 'voice'])
   })
 
   test('a session with a terminal and a desktop animates the terminal and leaves the desktop band alone', async ($, on) => {
@@ -755,7 +780,8 @@ describe('register', () => {
 
     for (const surface of ['terminal', 'desktop'] as const) {
       const band = await mountBand($, surface)
-      const frames = (await band.findAll({ type: 'Box' })).filter(box => box.props.borderStyle !== undefined)
+      // The support link has a frame of its own: the band's frame is the one that is not the support's.
+      const frames = (await band.findAll({ type: 'Box' })).filter(box => box.props.borderStyle !== undefined && box.key !== 'support')
 
       expect(frames.map(box => [box.props.borderStyle, box.props.borderColor])).toEqual([['round', FRAME_COLOR]])
       await band.unmount()

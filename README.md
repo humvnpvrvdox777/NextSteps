@@ -9,8 +9,9 @@ answer aloud, and a side assistant to think through your next request before you
 
 ## Support
 
-next-steps is free and open source. If it saves you time, support its development on
-[PayPal](https://paypal.me/bside777). Questions and licensing: humvnpvrvdox@gmail.com
+next-steps is free and open source. If it saves you time, if you like it, or if you simply feel like buying me a
+coffee, support its development on [PayPal](https://paypal.me/bside777). Questions and licensing:
+humvnpvrvdox@gmail.com
 
 ## How it works
 
@@ -81,6 +82,7 @@ else, set the `voiceHome` option. If the voice cannot start, the mod says why an
 | **Voice** dropdown | The band | Picks Off or a voice file; the choice is kept for the next session |
 | `s` or **Stop** | The band, while the voice is on | Stops the voice at once |
 | `d` or **Talk it over** | The band | Opens the side assistant |
+| **SUPPORT THE CREATOR** | Bottom right of the band | Opens the PayPal page. It glows gold for three seconds every 3 min 33 s |
 | `/voice` (`/voce`) | The prompt | Switches the voice on or off |
 | **Copy** / **Send to the project** | The assistant's panel, when it proposes a request | Copies the request, or sends it to the project as your own message |
 

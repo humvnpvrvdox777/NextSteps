@@ -48,9 +48,11 @@ const daemon = atom({ plugin: 'next-steps', key: 'daemon' } as const, 'off')
 const busy = atom({ plugin: 'next-steps', key: 'busy' } as const, false)
 const chat = atom({ plugin: 'next-steps', key: 'chat' } as const, [])
 const draft = atom({ plugin: 'next-steps', key: 'draft' } as const, '')
+// The support link glows gold for a moment; the timer that lights it lives with the session.
+const glow = atom({ plugin: 'next-steps', key: 'glow' } as const, false)
 
 // A Select is not on every surface (not on mobile): the column draws the voice dropdown only where it is.
-type Basic = Pick<Elements['terminal'], 'Box' | 'Button' | 'Text'> & Partial<Pick<Elements['terminal'], 'Select'>>
+type Basic = Pick<Elements['terminal'], 'Box' | 'Button' | 'Link' | 'Text'> & Partial<Pick<Elements['terminal'], 'Select'>>
 
 const PANE_ID = 'assistant'
 const VOICE_KEY = 'voice'
@@ -61,12 +63,18 @@ const POLL_MS = 300
 const REPLY_TIMEOUT_MS = 300000
 const QUIT_TIMEOUT_MS = 3000
 const RECHECK_MS = 150
+// The support link: PayPal, and a gold glow of three seconds every 3 min 33 s while a session is open.
+const SUPPORT_URL = 'https://paypal.me/bside777'
+const SUPPORT_EVERY_MS = 213000
+const SUPPORT_GLOW_MS = 3000
+const SUPPORT_GOLD = '#D4A017'
 
 let generation = 0
 let current: Phase = 'idle'
 let ticks = 0
 let timer: Timer | null = null
 let dismissal: Timer | null = null
+let supportTimer: Timer | null = null
 let queue: Promise<void> = Promise.resolve()
 let engine: Voice | null = null
 let homeOption = ''
@@ -1005,6 +1013,25 @@ const suggest = async ($: EngineInterface, answer: string, mine: number) => {
   }
 }
 
+// The support link, at the bottom right of the band. Its frame and background turn gold while it glows.
+const supportRow = (t: Basic, glowing: boolean, texts: Strings) => {
+  const { Box, Link } = t
+
+  return (
+    <Box flexDirection="row" justifyContent="flex-end">
+      <Box
+        key="support"
+        borderStyle="round"
+        borderColor={glowing ? SUPPORT_GOLD : FRAME_COLOR}
+        backgroundColor={glowing ? SUPPORT_GOLD : undefined}
+        paddingX={1}
+      >
+        <Link key="support-link" href={SUPPORT_URL} label={texts.button.support} />
+      </Box>
+    </Box>
+  )
+}
+
 const column = (
   $: EngineInterface,
   t: Basic,
@@ -1099,6 +1126,16 @@ export const register: Register = (on, options) => {
 
     await update($, voice, () => wanted)
     await update($, daemon, () => 'off')
+    await update($, glow, () => false)
+
+    // The support link lights up for a moment every few minutes, while the session is open.
+    supportTimer?.cancel()
+    supportTimer = $.clock.every(SUPPORT_EVERY_MS, () => {
+      void update($, glow, () => true).catch(() => {})
+      $.clock.after(SUPPORT_GLOW_MS, () => {
+        void update($, glow, () => false).catch(() => {})
+      })
+    })
 
     // A session that draws no band has nobody to read to; if one appears later, the first answer wakes the voice.
     if (wanted && (await hasBand($))) {
@@ -1144,6 +1181,8 @@ export const register: Register = (on, options) => {
 
   on('session.end', async ($, e, next) => {
     generation += 1
+    supportTimer?.cancel()
+    supportTimer = null
     await stopVoice($)
     await endConversation($)
     await setPhase($, 'idle')
@@ -1188,6 +1227,7 @@ export const register: Register = (on, options) => {
     const picked = voiceOn ? voiceFile() : VOICE_OFF
     const state = await read($, daemon)
     const placedSteps = await read($, placed)
+    const glowing = await read($, glow)
     // The band is one slot for every mod: what the others draw (the check-handoff-clean-B7 row)
     // stays on top, the mascot goes under it, never over it.
     const below = await next(e)
@@ -1210,6 +1250,7 @@ export const register: Register = (on, options) => {
               />
               {column($, $.ui.resolve(e), now, frame, found, how, placedSteps, voiceOn, state, voiceChoices(), picked, strings)}
             </Box>
+            {supportRow($.ui.resolve(e), glowing, strings)}
           </Box>
         </Box>
       )
@@ -1235,6 +1276,7 @@ export const register: Register = (on, options) => {
             />
             {column($, $.ui.resolve(e), now, undefined, found, how, placedSteps, voiceOn, state, e.surface === 'mobile' ? null : voiceChoices(), picked, strings)}
           </Box>
+          {supportRow($.ui.resolve(e), glowing, strings)}
         </Box>
       </Box>
     )
