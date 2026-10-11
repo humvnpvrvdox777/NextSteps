@@ -1009,7 +1009,7 @@ const suggest = async ($: EngineInterface, answer: string, mine: number) => {
   }
 }
 
-// The support line, at the bottom right of the band: the label in Claude's peach on a small dark teal strip, and a
+// The support line, at the bottom right of the band: the label in Claude's peach, and a
 // clickable arrow beside it that opens the page. The label is plain text, so it can take the colour; the arrow is the
 // link, and the engine's Link takes no colour, so the arrow keeps the theme's link colour.
 const supportRow = (t: Basic, texts: Strings) => {
@@ -1017,7 +1017,7 @@ const supportRow = (t: Basic, texts: Strings) => {
 
   return (
     <Box flexDirection="row" justifyContent="flex-end">
-      <Box flexDirection="row" gap={1} backgroundColor={FRAME_COLOR}>
+      <Box flexDirection="row" gap={1}>
         <Text color={SUPPORT_PEACH}>{texts.button.support}</Text>
         <Link key="support-link" href={SUPPORT_URL} label="↗" />
       </Box>
