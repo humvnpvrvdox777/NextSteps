@@ -14,8 +14,8 @@ next-steps is free and open source. If it saves you time, support its developmen
 
 ## How it works
 
-1. You finish a turn with Claude. next-steps asks the model for three next steps based on the end of that answer,
-   however short it is.
+1. You finish a turn with Claude. next-steps asks the model for three next steps based on that answer. A very long
+   answer is shortened, and the model gets its end.
 2. The mascot appears above your prompt and asks "How do you want to continue?". With the voice on, it also reads
    the answer and the options aloud.
 3. Press `1`, `2` or `3`, or click a step. In the terminal the step goes into the prompt. In the desktop app the
@@ -35,7 +35,7 @@ next-steps is free and open source. If it saves you time, support its developmen
 Run these commands in Claude Code, from a terminal session:
 
 ```text
-/plugin marketplace add humvnpvrvdox777/next-steps
+/plugin marketplace add humvnpvrvdox777/NextSteps
 /plugin install next-steps@next-steps
 ```
 
@@ -98,7 +98,8 @@ Set these in the plugin's options in Claude Code. Values that cannot be used fal
 
 ## Privacy
 
-- **Suggestions** send the end of each qualifying answer to the model, under your own account.
+- **Suggestions** send each finished answer to the model under your own account: the whole answer, or its end if it is
+  very long.
 - **The assistant** sends each of your messages to the model, in its own conversation. That conversation is not
   written into your project or its transcript.
 - **The voice** runs locally. The text goes to a Piper process listening on `127.0.0.1` only, behind a secret that
