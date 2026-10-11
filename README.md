@@ -82,7 +82,6 @@ else, set the `voiceHome` option. If the voice cannot start, the mod says why an
 | **Voice** dropdown | The band | Picks Off or a voice file; the choice is kept for the next session |
 | `s` or **Stop** | The band, while the voice is on | Stops the voice at once |
 | `d` or **Talk it over** | The band | Opens the side assistant |
-| **SUPPORT THE CREATOR** | Bottom right of the band | Opens the PayPal page. It glows gold for three seconds every 3 min 33 s |
 | `/voice` (`/voce`) | The prompt | Switches the voice on or off |
 | **Copy** / **Send to the project** | The assistant's panel, when it proposes a request | Copies the request, or sends it to the project as your own message |
 
