@@ -1,6 +1,6 @@
 import type { Daemon, Via } from '../types'
 import { tailOf } from './text'
-import { STRINGS } from './strings'
+import { STRINGS, fill } from './strings'
 import type { Strings } from './strings'
 
 export const STEP_COUNT = 3
@@ -135,5 +135,5 @@ export const placedLine = (
   total: number,
   via: Via,
   texts: Strings['placed'] = STRINGS.en.placed,
-): string => (via === 'clipboard' ? texts.clipboard(count, total) : texts.prompt(count, total))
+): string => fill(via === 'clipboard' ? texts.clipboard : texts.prompt, { count, total })
 

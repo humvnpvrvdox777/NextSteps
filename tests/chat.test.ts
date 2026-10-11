@@ -106,7 +106,7 @@ describe('chat', () => {
     expect(w.seen.opened).toEqual(['assistant', 'assistant'])
   })
 
-  test('typing to the assistant asks the chosen model at its highest effort, and shows the reply', async ($, on) => {
+  test('typing to the assistant asks the chosen model at its highest effort, and shows the reply', { options: { language: 'en' } }, async ($, on) => {
     const w = world(on)
     const { pane } = await talking($, w)
 
@@ -211,7 +211,7 @@ describe('chat', () => {
     expect(w.seen.logs).toContainEqual({ text: 'next-steps: the assistant answered without a <say> block', to: 'debug' })
   })
 
-  test('while the assistant works the mascot thinks and the panel offers to cancel; cancelling ends the call without a word', async ($, on) => {
+  test('while the assistant works the mascot thinks and the panel offers to cancel; cancelling ends the call without a word', { options: { language: 'en' } }, async ($, on) => {
     const w = world(on)
     const { band, pane } = await talking($, w)
     const release = w.holdComplete()
@@ -280,7 +280,7 @@ describe('chat', () => {
     expect(await pane.find({ type: 'Text', text: 'You: due' })).toBeUndefined()
   })
 
-  test('a hand-off fills an editable field, and nothing is sent or copied until a button is pressed', async ($, on) => {
+  test('a hand-off fills an editable field, and nothing is sent or copied until a button is pressed', { options: { language: 'en' } }, async ($, on) => {
     const w = world(on)
     const { pane } = await talking($, w)
 
@@ -466,7 +466,7 @@ describe('chat', () => {
     expect(await band.find({ type: 'Text', text: 'Talking it over: write in the panel' })).toBeDefined()
   })
 
-  test('with the voice on the opening and the replies are spoken, errors are not', async ($, on) => {
+  test('with the voice on the opening and the replies are spoken, errors are not', { options: { language: 'en' } }, async ($, on) => {
     const w = world(on, { voice: true })
 
     await $.session.start(SESSION)

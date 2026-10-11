@@ -78,6 +78,18 @@ describe('voice flow', () => {
     expect(w.daemon.spawns[0]?.argv.at(-1)).toBe(`${HOME}\\voices\\it_IT-serena-high.onnx`)
   })
 
+  test('under auto a message in Italian with the voice on starts the daemon again on the Italian voice file', { options: { language: 'auto' } }, async ($, on) => {
+    const w = world(on, { voice: true })
+
+    await withVoice($, w)
+    expect(w.daemon.spawns[0]?.argv.at(-1)).toBe(`${HOME}\\voices\\en_US-ljspeech-high.onnx`)
+
+    await $.prompt.submit({ ...SUBMIT, text: 'Puoi spiegarmi come funziona questo errore?' })
+    await w.advance(0)
+
+    expect(w.daemon.spawns.at(-1)?.argv.at(-1)).toBe(`${HOME}\\voices\\it_IT-serena-high.onnx`)
+  })
+
   test('a long answer is read aloud while the steps are prepared, and the band says it is reading', async ($, on) => {
     const w = world(on, { voice: true })
 
@@ -323,7 +335,7 @@ describe('voice flow', () => {
 
     await $.session.start(SESSION)
 
-    expect(w.seen.commands).toEqual(['voice'])
+    expect(w.seen.commands).toEqual(['voice', 'voce'])
 
     const on1 = await $.command.run({ command: 'voice', ...COMMAND })
 

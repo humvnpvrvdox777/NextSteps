@@ -14,8 +14,16 @@ you press a button.
 
 ## Language
 
-The default is English. The plugin option `language` (`en` or `it`) sets the labels, the mascot's lines, the toasts, the panel and the voice phrases. The slash command is `/voice` in English and `/voce` in Italian. The suggested steps and the assistant's replies follow the language you write in. The voice follows the language
-too: LJSpeech for English, Serena for Italian.
+The plugin option `language` sets the labels, the mascot's lines, the toasts, the panel and the voice phrases. Its default
+is `auto`: the language follows the last message you sent, in the prompt or in the assistant's panel, in any language
+Claude writes. English, Italian and Romanian texts are built in. Any other language is translated by the model the first
+time it is needed, and the translation is kept in the store. The words of a message settle English and Italian at once;
+any other message is named by the model in the background. A message too short to name keeps the current language, and
+the first session starts in English. `en`, `it` or `ro` fixes the language. Both `/voice` and `/voce` work under `auto`;
+a fixed language has only its own. The suggested steps and the assistant's replies follow the language you write in.
+The voice follows the language too: LJSpeech for English, Serena for Italian; Romanian and the other languages are read
+with the English voice. A switch with the voice on, and no voice file picked in the dropdown, starts the daemon again on
+the file of the new language.
 
 ## Behavior
 
@@ -40,7 +48,7 @@ too: LJSpeech for English, Serena for Italian.
 - A button's label is the whole step, never shortened: the band takes the room it needs and the label wraps onto
   more rows. The engine refuses a Button whose only child is a `Text`, unless it also has a label, so the step is
   the label. Whether the host wraps a long label on the terminal and on the desktop is not yet checked live.
-- The steps are written in the language of your last message. The mascot's lines and the labels are English by default; the `language` option (`en` or `it`) switches them.
+- The steps are written in the language of your last message. The mascot's lines and the labels follow the `language` option: `auto` (the default) follows your last message in any language, `en`, `it` or `ro` fixes them.
 - The band also holds three controls: **Voice** (a dropdown: Off, or one of the voice files in the voices folder; its label says "starting…" or "unavailable" when the daemon starts or fails), **Stop** (`s`, only while the voice is on and ready) and **Talk it over** (`d`). Hotkeys
   work where the band holds the keyboard (the terminal). The slash command `/voce` switches the voice too.
 
@@ -263,7 +271,7 @@ it the mod works as before: pressing Voice gives a toast that names the missing 
 
 The English voice is one download, 109 MB: `en_US-ljspeech-high.onnx` and `en_US-ljspeech-high.onnx.json` from
 `https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ljspeech/high/`, into `voices\`. The Italian one
-is the Serena file above (114 MB). Both are read by the same daemon: the mod picks the file by the `language` option.
+is the Serena file above (114 MB). Both are read by the same daemon: the mod picks the file by the language in use.
 
 ## Verification
 

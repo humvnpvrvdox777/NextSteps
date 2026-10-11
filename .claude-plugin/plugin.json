@@ -10,12 +10,14 @@
     "language": {
       "type": "string",
       "title": "Language",
-      "description": "The language of the labels, the mascot's lines and the voice phrases: en (English) or it (Italiano). The suggested steps follow the language you write in.",
+      "description": "The language of the labels, the mascot's lines and the voice phrases. auto follows the language of your last message, in any language Claude writes; en, it or ro (Romanian) fixes it. The suggested steps and the assistant's replies always follow the language you write in.",
       "options": [
+        "auto",
         "en",
-        "it"
+        "it",
+        "ro"
       ],
-      "default": "en"
+      "default": "auto"
     },
     "assistantModel": {
       "type": "string",

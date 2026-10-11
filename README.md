@@ -43,7 +43,7 @@ Then run `/reload-plugins` or restart Claude Code. The mod is active from the ne
 
 ## Turning on the voice (optional)
 
-The voice is off by default. It uses the voice that matches the `language` option. Create the Python environment
+The voice is off by default. It uses the voice that matches the language in use. Create the Python environment
 once (Python 3.12):
 
 ```powershell
@@ -90,7 +90,7 @@ Set these in the plugin's options in Claude Code. Values that cannot be used fal
 
 | Option | Default | What it does |
 | --- | --- | --- |
-| `language` | `en` | `en` (English) or `it` (Italiano): the labels, the mascot's lines, the voice phrases and the voice file |
+| `language` | `auto` | `auto` follows the language of your last message, in any language Claude writes. `en` (English), `it` (Italiano) or `ro` (Română) fixes it: the labels, the mascot's lines, the voice phrases and the voice file |
 | `assistantModel` | `claude-sonnet-5-5` | The model for the side assistant |
 | `assistantEffort` | `max` | How hard the assistant thinks: `low`, `medium`, `high`, `xhigh` or `max` |
 | `assistantMaxTokens` | `16000` | The longest reply the assistant may write (up to 64000) |
@@ -110,8 +110,9 @@ Set these in the plugin's options in Claude Code. Values that cannot be used fal
 
 - The voice works on Windows only. Each language has its own voice: a text in one language read by the other voice
   sounds accented.
-- The labels and the mascot's lines follow the `language` option. The suggested steps follow the language of your
-  last message.
+- The labels and the mascot's lines follow the `language` option. Languages other than English, Italian and Romanian
+  are translated by the model the first time, which takes a few seconds; a message too short to name keeps the current
+  language.
 
 ## Development
 

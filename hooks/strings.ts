@@ -1,9 +1,12 @@
-// Every sentence the mod shows or says, in each language. English is the default; the plugin option `language`
-// picks the other one. Both tables have the same keys: a test holds them to that.
+// Every sentence the mod shows or says. English, Italian and Romanian are built in; any other language is translated by
+// the model the first time it is needed, and the translation is kept in the store. Placeholders like {count} stay as
+// they are in every language. The built-in tables have the same keys: a test holds them to that.
 
-export const LANGUAGES = ['en', 'it'] as const
+export const LANGUAGES = ['en', 'it', 'ro'] as const
 
-export type Language = (typeof LANGUAGES)[number]
+// The key of the language the mod writes in: a built-in code (en, it, ro), or the lowercase English name of any other
+// language, such as "french".
+export type Language = string
 
 export const DEFAULT_LANGUAGE: Language = 'en'
 
@@ -18,7 +21,8 @@ export type Strings = {
   // The mascot's line for each phase. The dots of the thinking lines are added by the caller.
   line: { reading: string; thinking: string; replying: string; chatting: string; copied: string; written: string }
   voice: { label: string; off: string; starting: string; unavailable: string }
-  placed: { prompt: (count: number, total: number) => string; clipboard: (count: number, total: number) => string }
+  // {count} and {total} are filled in by fill().
+  placed: { prompt: string; clipboard: string }
   button: { talk: string; stop: string }
   pane: {
     title: string
@@ -73,9 +77,8 @@ const EN: Strings = {
   },
   voice: { label: 'Voice:', off: 'Off', starting: 'Voice: starting…', unavailable: 'Voice: unavailable' },
   placed: {
-    prompt: (count, total) => `In the prompt: ${count} of ${total}. Press Enter in the prompt to send them.`,
-    clipboard: (count, total) =>
-      `On the clipboard: ${count} of ${total}. Paste them into the prompt with Ctrl+V, then press Enter.`,
+    prompt: 'In the prompt: {count} of {total}. Press Enter in the prompt to send them.',
+    clipboard: 'On the clipboard: {count} of {total}. Paste them into the prompt with Ctrl+V, then press Enter.',
   },
   button: { talk: 'Talk it over', stop: 'Stop' },
   pane: {
@@ -142,8 +145,8 @@ const IT: Strings = {
   },
   voice: { label: 'Voce:', off: 'Spenta', starting: 'Voce: avvio…', unavailable: 'Voce: non disponibile' },
   placed: {
-    prompt: (count, total) => `Nel prompt: ${count} di ${total}. Premi Invio nel prompt per mandarli.`,
-    clipboard: (count, total) => `Negli appunti: ${count} di ${total}. Incollali nel prompt con Ctrl+V, poi premi Invio.`,
+    prompt: 'Nel prompt: {count} di {total}. Premi Invio nel prompt per mandarli.',
+    clipboard: 'Negli appunti: {count} di {total}. Incollali nel prompt con Ctrl+V, poi premi Invio.',
   },
   button: { talk: 'Discutiamone', stop: 'Stop' },
   pane: {
@@ -190,8 +193,171 @@ const IT: Strings = {
   },
 }
 
-export const STRINGS: Record<Language, Strings> = { en: EN, it: IT }
+const RO: Strings = {
+  voiceModel: 'en_US-ljspeech-high.onnx',
+  command: {
+    name: 'voce',
+    description: 'Pornește sau oprește vocea care citește răspunsurile',
+    switchedOn: 'Voce pornită: începe în câteva secunde.',
+    switchedOff: 'Voce oprită.',
+  },
+  ask: 'Cum vrei să continui?',
+  ordinals: ['Unu', 'Doi', 'Trei'],
+  line: {
+    reading: 'Îți citesc răspunsul',
+    thinking: 'Mă gândesc cum să continui',
+    replying: 'Mă mai gândesc',
+    chatting: 'Discutăm: scrie în panou',
+    copied: 'Copiat: lipește-l cu Ctrl+V',
+    written: 'Bine, îl scriu în prompt',
+  },
+  voice: { label: 'Voce:', off: 'Oprită', starting: 'Voce: pornire…', unavailable: 'Voce: indisponibilă' },
+  placed: {
+    prompt: 'În prompt: {count} din {total}. Apasă Enter în prompt ca să le trimiți.',
+    clipboard: 'În clipboard: {count} din {total}. Lipește-le în prompt cu Ctrl+V, apoi apasă Enter.',
+  },
+  button: { talk: 'Discutăm', stop: 'Stop' },
+  pane: {
+    title: 'Asistent',
+    you: 'Tu',
+    assistant: 'Asistent',
+    write: 'Scrie:',
+    placeholder: 'apoi apasă Enter',
+    thinking: 'Asistentul se gândește…',
+    cancel: 'Anulează',
+    proposal: 'Cerere pentru proiect (o poți modifica):',
+    copy: 'Copiază',
+    send: 'Trimite la proiect',
+    close: 'Închide',
+  },
+  toast: {
+    copied: 'Copiat în clipboard: lipește-l în prompt cu Ctrl+V',
+    dialog: 'Închide fereastra de dialog și încearcă din nou',
+    clipboardFailed: 'Nu pot copia în clipboard',
+    refused: 'Nu pot scrie în prompt',
+    sent: 'Trimis la proiect',
+    sendFailed: 'Nu pot trimite la proiect',
+    notAccepted: 'Proiectul nu a acceptat cererea: este încă aici, încearcă din nou sau copiaz-o',
+    stillAnswering: 'Asistentul încă răspunde: așteaptă sau apasă Anulează',
+    voiceFailed: 'Vocea nu pornește',
+    voiceLost: 'Vocea s-a oprit: pornește-o din nou cu butonul Voce',
+    voiceSkipped: 'Vocea nu a putut citi acest răspuns',
+  },
+  replyFailed: {
+    limit: 'Prea multe cereri acum: așteaptă puțin și încearcă din nou.',
+    network: 'Nu pot ajunge la model acum. Încearcă din nou în curând.',
+    empty: 'Nu am primit un răspuns. Încearcă din nou.',
+    slow: 'Răspunsul durează prea mult: încearcă din nou.',
+    other: 'Nu pot răspunde acum.',
+  },
+  opening: 'Spune-mi ce crezi sau ce nu ți se pare în regulă: discutăm și hotărâm cum să continuăm.',
+  spoken: {
+    code: 'Bloc de cod.',
+    table: 'Tabel.',
+    link: 'un link',
+    path: 'o cale',
+    id: 'un identificator',
+    rest: 'Restul răspunsului este în text.',
+  },
+}
 
-// The option's value, or the default when it names no language the mod has.
+// The built-in languages, by key. Any other language has no entry: it is translated, and kept in the store.
+export const STRINGS = { en: EN, it: IT, ro: RO } as const
+
+// The built-in table of a language, or undefined for any other. Own keys only: "constructor" is not a language.
+export const builtInStrings = (language: string): Strings | undefined =>
+  Object.prototype.hasOwnProperty.call(STRINGS, language) ? STRINGS[language as keyof typeof STRINGS] : undefined
+
+// The plugin option: a built-in language, or auto, which follows the language of the person's last message.
+export const LANGUAGE_OPTIONS = ['auto', ...LANGUAGES] as const
+
+export type LanguageOption = (typeof LANGUAGE_OPTIONS)[number]
+
+export const languageOptionFrom = (value: unknown): LanguageOption =>
+  LANGUAGE_OPTIONS.find(option => option === value) ?? 'auto'
+
+// The language a fixed option names; anything else means English.
 export const languageFrom = (value: unknown): Language =>
   LANGUAGES.find(language => language === value) ?? DEFAULT_LANGUAGE
+
+// The key for a language the model named, such as "Italian" or "French": the built-in code when there is one.
+const BUILT_IN_NAMES: Readonly<Record<string, Language>> = { english: 'en', italian: 'it', romanian: 'ro' }
+
+export const languageKeyFor = (name: string): Language | null => {
+  const word = name.toLowerCase().replace(/[^\p{L}]/gu, '')
+
+  if (word === '' || word === 'unknown') {
+    return null
+  }
+
+  return BUILT_IN_NAMES[word] ?? word
+}
+
+// The sentences of a language as flat keys, such as "pane.send" or "ordinals.0": what the model translates.
+export type Flat = Record<string, string>
+
+// Keys that are not sentences: a voice file and a command name must stay what they are in every language.
+const NOT_TRANSLATED = ['voiceModel', 'command.name']
+
+export const translatableKeys = (): string[] => Object.keys(flatten(EN)).filter(key => !NOT_TRANSLATED.includes(key))
+
+export const flatten = (strings: Strings): Flat => {
+  const flat: Flat = {}
+
+  const walk = (value: unknown, path: string): void => {
+    if (typeof value === 'string') {
+      flat[path] = value
+    } else if (Array.isArray(value)) {
+      value.forEach((item, index) => walk(item, `${path}.${index}`))
+    } else if (value !== null && typeof value === 'object') {
+      for (const [key, inner] of Object.entries(value)) {
+        walk(inner, path === '' ? key : `${path}.${key}`)
+      }
+    }
+  }
+
+  walk(strings, '')
+
+  return flat
+}
+
+// The English table with the given sentences put in place: every key not given keeps its English sentence.
+export const rebuild = (flat: Flat): Strings => {
+  const english = flatten(EN)
+  const strings = JSON.parse(JSON.stringify(EN)) as Record<string, unknown>
+
+  for (const key of translatableKeys()) {
+    const path = key.split('.')
+    const last = path.pop() as string
+    const parent = path.reduce<Record<string, unknown>>((node, step) => node[step] as Record<string, unknown>, strings)
+
+    parent[last] = flat[key] ?? english[key]
+  }
+
+  return strings as unknown as Strings
+}
+
+const placeholdersOf = (text: string): string[] => [...text.matchAll(/\{\w+\}/g)].map(match => match[0]).sort()
+
+// What the model answered for each key, kept only where it is usable: a sentence that keeps the placeholders of the
+// English one. Anything else keeps the English sentence.
+export const translationFrom = (english: Flat, answer: unknown): Flat => {
+  const given = answer !== null && typeof answer === 'object' ? (answer as Record<string, unknown>) : {}
+  const flat: Flat = {}
+
+  for (const key of translatableKeys()) {
+    const value = given[key]
+    const usable =
+      typeof value === 'string' &&
+      value.trim() !== '' &&
+      JSON.stringify(placeholdersOf(value)) === JSON.stringify(placeholdersOf(english[key] ?? ''))
+
+    flat[key] = usable ? value.trim() : (english[key] ?? '')
+  }
+
+  return flat
+}
+
+// Puts the values into a template: {name} becomes values.name, and a placeholder with no value stays as it is.
+export const fill = (template: string, values: Readonly<Record<string, string | number>>): string =>
+  template.replace(/\{(\w+)\}/g, (match, name: string) => (name in values ? String(values[name]) : match))
