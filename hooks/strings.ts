@@ -148,7 +148,7 @@ const IT: Strings = {
     prompt: 'Nel prompt: {count} di {total}. Premi Invio nel prompt per mandarli.',
     clipboard: 'Negli appunti: {count} di {total}. Incollali nel prompt con Ctrl+V, poi premi Invio.',
   },
-  button: { talk: 'Discutiamone', stop: 'Stop', support: 'SOSTIENIMI' },
+  button: { talk: 'Discutiamone', stop: 'Stop', support: 'Sostieni il progetto' },
   pane: {
     title: 'Assistente',
     you: 'Tu',
