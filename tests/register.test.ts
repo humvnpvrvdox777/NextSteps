@@ -4,6 +4,7 @@ import { FRAME_COLOR, FRAME_MS, poseFor, toCells } from '../hooks/mascot'
 import {
   STEPS_MAX_TOKENS,
   STEPS_MODEL,
+  STEPS_SEE_EARLIER,
   SUGGEST_DELAY_MS,
   THINKING_TIMEOUT_MS,
   TOAST,
@@ -61,6 +62,87 @@ describe('register', () => {
 
     expect(w.seen.prompts).toHaveLength(1)
     expect(w.seen.prompts[0]).toContain('<request>\nFix the filter so it skips short answers\n</request>')
+  })
+
+  test('the person\'s earlier messages stay out of the prompt: with them the steps scored lower, blind, and it cost more', async ($, on) => {
+    const w = world(on)
+
+    expect(STEPS_SEE_EARLIER).toBe(false)
+    await $.session.start(SESSION)
+
+    for (const text of ['first request', 'second request', 'third request']) {
+      await $.prompt.submit({ ...SUBMIT, text })
+      await $.turn.complete(TURN)
+      await w.advance(SUGGEST_DELAY_MS)
+    }
+
+    expect(w.seen.prompts).toHaveLength(3)
+
+    for (const prompt of w.seen.prompts) {
+      expect(prompt).not.toContain("The person's earlier messages")
+    }
+
+    expect(w.seen.prompts[2]).toContain('<request>\nthird request\n</request>')
+    expect(w.seen.prompts[2]).not.toContain('first request')
+  })
+
+  test('the fork offered is kept, and the next prompt asks for another kind', async ($, on) => {
+    const w = world(on)
+
+    await $.session.start(SESSION)
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    expect(w.store.get('forks')).toEqual([STEPS[2]])
+
+    await $.prompt.submit({ ...SUBMIT, text: 'go on' })
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    expect(w.seen.prompts[1]).toContain(`Forks already offered (propose another kind):\n- ${STEPS[2]}\n`)
+  })
+
+  test('the step the person picks is kept with its role, and shows up in the next prompt', async ($, on) => {
+    const w = world(on)
+
+    await $.session.start(SESSION)
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    const band = await mountBand($, 'terminal')
+
+    await band.press({ key: 'step-2' })
+
+    expect(w.store.get('picks')).toEqual([{ role: 2, text: STEPS[1] }])
+
+    await $.prompt.submit({ ...SUBMIT, text: 'next one' })
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    expect(w.seen.prompts[1]).toContain(`(their wording; never repeat them):\n- 2: ${STEPS[1]}\n`)
+  })
+
+  test('the picks and the forks outlive a cleared conversation: they are the way the person works', async ($, on) => {
+    const w = world(on, { picks: [{ role: 1, text: 'Write the tests' }], forks: ['Try a cheaper model'] })
+
+    await $.session.start(SESSION)
+    await $.prompt.submit({ ...SUBMIT, text: 'anything' })
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    expect(w.seen.prompts[0]).toContain('- 1: Write the tests')
+    expect(w.seen.prompts[0]).toContain('- Try a cheaper model')
+  })
+
+  test('a damaged store value is an empty list, never a failure', async ($, on) => {
+    const w = world(on, { picks: 'not a list', forks: [42, null, { role: 'x' }] })
+
+    await $.session.start(SESSION)
+    await $.turn.complete(TURN)
+    await w.advance(SUGGEST_DELAY_MS)
+
+    expect(w.seen.prompts).toHaveLength(1)
+    expect(w.seen.prompts[0]).not.toContain('<before>')
   })
 
   test('the steps come from one short completion on Sonnet, not from a fork of the conversation', async ($, on) => {

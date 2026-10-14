@@ -20,19 +20,27 @@ import {
 import type { Flat, Language, LanguageOption, Strings } from './strings'
 import {
   CLIPBOARD_ARGV,
+  MAX_EARLIER,
+  MAX_FORKS,
+  MAX_PICKS,
   STEPS_MAX_TOKENS,
   STEPS_MODEL,
+  STEPS_SEE_EARLIER,
   SUGGEST_DELAY_MS,
   THINKING_TIMEOUT_MS,
   VOICE_START_TIMEOUT_MS,
   buildPrompt,
+  earlierOf,
   fillFor,
   handoffFor,
+  keepNewest,
   parseSteps,
   placedLine,
+  roleOf,
   shouldSuggest,
   voiceLabel,
 } from './steps'
+import type { PickedStep, StepContext } from './steps'
 import { createVoice } from './voice'
 import type { Voice, VoicePorts } from './voice'
 
@@ -94,6 +102,12 @@ let strings: Strings = STRINGS.en
 let lastAnswer = ''
 // The person's last message: the steps of an answer are for what was asked (set by prompt.submit).
 let lastRequest = ''
+// The messages of this conversation, the last one included: the two before it go into the steps' prompt as background.
+let recentRequests: string[] = []
+// The forks offered and the steps picked are kept in the store, so that the next fork is of another kind and the steps
+// speak the way the person picks them.
+const FORKS_KEY = 'forks'
+const PICKS_KEY = 'picks'
 let isSilenced = false
 let isStepsReady = false
 let isAsking = false
@@ -646,6 +660,7 @@ const choose = async ($: EngineInterface, step: string) => {
   if (filled.isFilled) {
     await update($, via, () => 'prompt')
     await update($, placed, list => [...list, step])
+    await rememberPick($, step)
 
     return
   }
@@ -670,6 +685,7 @@ const choose = async ($: EngineInterface, step: string) => {
   if (await copyToClipboard($, all.join('\n'))) {
     await update($, via, () => 'clipboard')
     await update($, placed, () => all)
+    await rememberPick($, step)
     $.ui.toast(strings.toast.copied)
 
     return
@@ -920,6 +936,53 @@ const sendDraft = async ($: EngineInterface) => {
   await setPhase($, 'idle')
 }
 
+const isText = (value: unknown): value is string => typeof value === 'string' && value.trim() !== ''
+
+const isPickedStep = (value: unknown): value is PickedStep =>
+  typeof value === 'object' &&
+  value !== null &&
+  typeof (value as PickedStep).role === 'number' &&
+  isText((value as PickedStep).text)
+
+// A list kept in the store, read leniently: a value that is missing or damaged is an empty list.
+const storedList = async <T,>($: EngineInterface, key: string, isItem: (value: unknown) => value is T): Promise<T[]> => {
+  try {
+    const value = await $.store.get(key)
+
+    return Array.isArray(value) ? value.filter(isItem) : []
+  } catch {
+    return []
+  }
+}
+
+// The background of the prompt: the person's two messages before the last, the forks already offered, the steps picked.
+const contextOf = async ($: EngineInterface): Promise<StepContext> => ({
+  earlier: STEPS_SEE_EARLIER ? earlierOf(recentRequests) : [],
+  forks: await storedList($, FORKS_KEY, isText),
+  picks: await storedList($, PICKS_KEY, isPickedStep),
+})
+
+const rememberFork = async ($: EngineInterface, fork: string) => {
+  try {
+    await $.store.set(FORKS_KEY, keepNewest(await storedList($, FORKS_KEY, isText), fork, MAX_FORKS))
+  } catch (error) {
+    $.ui.log(`next-steps: ${String(error)}`, { to: 'debug' })
+  }
+}
+
+// The role is the step's place among the ones offered, 1 to 3.
+const rememberPick = async ($: EngineInterface, step: string) => {
+  try {
+    const role = roleOf(await read($, steps), step)
+
+    if (role !== null) {
+      await $.store.set(PICKS_KEY, keepNewest(await storedList($, PICKS_KEY, isPickedStep), { role, text: step }, MAX_PICKS))
+    }
+  } catch (error) {
+    $.ui.log(`next-steps: ${String(error)}`, { to: 'debug' })
+  }
+}
+
 const findSteps = async ($: EngineInterface, answer: string, request: string): Promise<string[]> => {
   let giveUp: (reply: null) => void = () => {}
   const waiting = new Promise<null>(resolve => {
@@ -928,9 +991,10 @@ const findSteps = async ($: EngineInterface, answer: string, request: string): P
   const timeout = $.clock.after(THINKING_TIMEOUT_MS, () => giveUp(null))
 
   try {
+    const context = await contextOf($)
     const call = $.model.complete({
       model: STEPS_MODEL,
-      prompt: buildPrompt(answer, request),
+      prompt: buildPrompt(answer, request, context),
       effort: 'low',
       maxTokens: STEPS_MAX_TOKENS,
     })
@@ -1009,6 +1073,13 @@ const suggest = async ($: EngineInterface, answer: string, mine: number) => {
     }
 
     await setPhase($, 'asking', found)
+
+    const fork = found[2]
+
+    if (fork !== undefined) {
+      void rememberFork($, fork).catch(() => {})
+    }
+
     void askAloud($, found, mine).catch(() => {})
   } catch (error) {
     $.ui.log(`next-steps: ${String(error)}`, { to: 'debug' })
@@ -1121,6 +1192,7 @@ export const register: Register = (on, options) => {
 
     voiceHome = homeOption !== '' ? homeOption : `${(await $.env.get('USERPROFILE')) ?? ''}\\.claude\\voice`
     chosenVoice = await storedVoice($)
+    recentRequests = []
     await refreshVoices($)
     await endConversation($)
     await setPhase($, 'idle')
@@ -1164,6 +1236,7 @@ export const register: Register = (on, options) => {
     // steps still in the making are all still current.
     if (result.drop === undefined) {
       lastRequest = e.text
+      recentRequests = [...recentRequests, e.text].slice(-(MAX_EARLIER + 1))
       generation += 1
       await stopVoice($)
       await endConversation($)
@@ -1175,6 +1248,7 @@ export const register: Register = (on, options) => {
 
   on('session.end', async ($, e, next) => {
     generation += 1
+    recentRequests = []
     await stopVoice($)
     await endConversation($)
     await setPhase($, 'idle')
