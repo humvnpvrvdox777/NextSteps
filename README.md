@@ -15,8 +15,7 @@ humvnpvrvdox@gmail.com
 
 ## How it works
 
-1. You finish a turn with Claude. next-steps asks the model for three next steps based on that answer. A very long
-   answer is shortened, and the model gets its end.
+1. You finish a turn with Claude. next-steps asks the model for three next steps based on that answer. 
 2. The mascot appears above your prompt and asks "How do you want to continue?". With the voice on, it also reads
    the answer and the options aloud.
 3. Press `1`, `2` or `3`, or click a step. In the terminal the step goes into the prompt. In the desktop app the
